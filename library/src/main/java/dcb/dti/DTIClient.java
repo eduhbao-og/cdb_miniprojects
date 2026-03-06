@@ -7,6 +7,7 @@ package dcb.dti;
 import java.io.Console;
 import java.io.IOException;
 import java.util.Scanner;
+import java.util.TreeMap;
 
 public class DTIClient {
 
@@ -39,11 +40,8 @@ public class DTIClient {
 
             } else if(cmd.equalsIgnoreCase("MY_COINS")){
                 
-                long[] coins = dtiStub.MY_COINS();
-                System.out.println("\ncoins: ");
-                for(int i = 0; i < coins.length; i += 2){
-                    System.out.println("\nid: " + coins[i] + " value: " + coins[i+1]+ "\n");
-                }
+                TreeMap<Long, Coin> coins = dtiStub.MY_COINS();
+                System.out.println("\ncoins: " + coins + "\n");
 
             } else if (cmd.equalsIgnoreCase("EXIT")) {
 

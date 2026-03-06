@@ -5,6 +5,7 @@
 package dcb.dti;
 
 import java.io.IOException;
+import java.util.TreeMap;
 
 import bftsmart.tom.ServiceProxy;
 
@@ -41,7 +42,7 @@ public class DTIStub {
     }
 
     //MY_COINS(): get the IDs and values of the coins associated with this user.
-    public long[] MY_COINS(){
+    public TreeMap<Long, Coin> MY_COINS(){
         byte[] rep;
         try {
             GenericMessage request = new GenericMessage(GenericMessage.Type.MY_COINS);

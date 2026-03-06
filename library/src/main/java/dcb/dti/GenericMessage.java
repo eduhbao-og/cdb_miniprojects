@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.TreeMap;
 
 /**
  * A generic message class that can be used for various operations in a DTI application.
@@ -23,8 +24,7 @@ public class GenericMessage implements Serializable {
     private Type type;
     private long value = 0;
     private long tokenId = -1;
-    
-    private long[] coins;
+    private TreeMap<Long, Coin> coins;
     
     //other possible data...
     
@@ -74,11 +74,11 @@ public class GenericMessage implements Serializable {
         this.tokenId = tokenId;
     }
     
-    public long[] getCoins() {
+    public TreeMap<Long, Coin> getCoins() {
         return coins;
     }
     
-    public void setCoins(long[] coins) {
+    public void setCoins(TreeMap<Long, Coin> coins) {
         this.coins = coins;
     }
 
