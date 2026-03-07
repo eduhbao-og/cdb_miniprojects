@@ -162,4 +162,22 @@ public class DTIStub {
             return;
         }
     }
+
+    // public void BUY_NFT(String name, long value) {
+    //     byte[] rep;
+    //     try {
+    //         GenericMessage request = new GenericMessage(GenericMessage.Type.SET_NFT_PRICE);
+    //         request.setName(name);
+    //         request.setValue(value);
+
+    //         //invokes BFT-SMaRt
+    //         rep = serviceProxy.invokeOrdered(GenericMessage.toBytes(request));
+    //     } catch (IOException e) {
+    //         System.err.println("Failed to send SET_NFT_PRICE request");
+    //         return;
+    //     }
+    //     if (rep.length == 0) {
+    //         return;
+    //     }
+    // }
 }

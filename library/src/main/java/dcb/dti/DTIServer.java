@@ -201,6 +201,27 @@ public class DTIServer extends DefaultSingleRecoverable {
                     }
                     break;
                 case SPEND:
+                    long[] spendingCoins =request.getSpendingCoins();
+                    long sum = 0;
+                    int receiver = request.getReceiverId();
+                    long value = request.getValue();
+                    for(int i = 0; i != spendingCoins.length; i++){
+                        if(!storedCoins.containsKey(spendingCoins[i]) || storedCoins.get(spendingCoins[i]).owner != senderId){
+                            return new byte[0];
+                        }
+                        sum += storedCoins.get(spendingCoins[i]).value;
+                    }
+                    if(sum < value){
+                        return new byte[0];
+                    }
+                    for(int i = 0; i != spendingCoins.length; i++){
+                        storedCoins.remove(spendingCoins[i]);
+                    }
+                    storedCoins.put(++ coinId, new Coin(coinId, receiver, value));
+                    response.setValue(sum - value);
+                    if(sum - value != 0){
+                        storedCoins.put(++coinId, new Coin(coinId, senderId, sum - value));
+                    }
                     break;
                 default:
                     break;

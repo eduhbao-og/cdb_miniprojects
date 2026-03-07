@@ -49,8 +49,6 @@ public class DTIClient {
                 if (cmdScanner.hasNext()) {
                     uri = cmdScanner.next();
                 }
-
-                //parse the remaining arguments (if any) 
             }
             
             if (cmd.equalsIgnoreCase("MINT") && value != -1) {
