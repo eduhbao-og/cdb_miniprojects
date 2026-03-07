@@ -7,7 +7,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.TreeMap;
-import java.util.TreeMap;
 
 /**
  * A generic message class that can be used for various operations in a DTI application.

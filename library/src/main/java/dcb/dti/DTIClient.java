@@ -42,7 +42,11 @@ public class DTIClient {
             } else if(cmd.equalsIgnoreCase("MY_COINS")){
                 
                 TreeMap<Long, Coin> coins = dtiStub.MY_COINS();
-                System.out.println("\ncoins: " + coins + "\n");
+                System.out.println("\ncoins: ");
+                for(Map.Entry<Long, Coin> entry : coins.entrySet()) {
+                    System.out.println("\nid: " + entry.getKey() 
+                                    + ", value: " + entry.getValue().value);
+                }
 
             } else if(cmd.equalsIgnoreCase("MY_NFTS")){
                 
@@ -58,6 +62,11 @@ public class DTIClient {
 
                 System.out.println("\tEXIT: Bye bye!\n");
                 System.exit(0);
+
+            } else if (cmd.equalsIgnoreCase("MINT") && value != -1) {
+
+                long newCoinId = dtiStub.mint(value);
+                System.out.println("\nnew coin minted with ID: " + newCoinId + "\n");
 
             } else {
                 System.out.println("\tInvalid command. Here's the available commands:P\n");
