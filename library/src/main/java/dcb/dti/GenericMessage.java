@@ -26,6 +26,8 @@ public class GenericMessage implements Serializable {
     private long tokenId = -1;
     private TreeMap<Long, Coin> coins;
     private TreeMap<Long, NFT> nfts;
+    private long[] spendingCoins;
+    private int receiverId;
     private String name;
     private String uri;
 
@@ -83,13 +85,29 @@ public class GenericMessage implements Serializable {
     public void setCoins(TreeMap<Long, Coin> coins) {
         this.coins = coins;
     }
-
+    
     public TreeMap<Long, NFT> getNFTs() {
         return nfts;
     }
-
+    
     public void setNFTs(TreeMap<Long, NFT> nfts) {
         this.nfts = nfts;
+    }
+    
+    public long[] getSpendingCoins() {
+        return spendingCoins;
+    }
+    
+    public void setSpendingCoins(long[] spendingCoins) {
+        this.spendingCoins = spendingCoins;
+    }
+    
+    public int getReceiverId() {
+        return receiverId;
+    }
+    
+    public void setReceiverId(int receiverId) {
+        this.receiverId = receiverId;
     }
 
     public String getName() {

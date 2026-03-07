@@ -23,6 +23,8 @@ public class DTIClient {
         while (true) {
             String cmd = "";
             long value = -1;
+            int receiver = -1;
+            
             String name = "";
             String uri = "";
 
@@ -39,6 +41,7 @@ public class DTIClient {
                 if (cmdScanner.hasNext()) {
                     value = cmdScanner.nextLong();
                 }
+
                 //parse the remaining arguments (if any) 
             }
             
@@ -55,6 +58,8 @@ public class DTIClient {
                     System.out.println("\nid: " + entry.getKey() 
                                     + ", value: " + entry.getValue().value);
                 }
+
+            }else if(cmd.equalsIgnoreCase("SPEND") && value != -1){
 
             } else if(cmd.equalsIgnoreCase("MY_NFTS")){
                 

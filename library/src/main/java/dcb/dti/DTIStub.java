@@ -91,6 +91,33 @@ public class DTIStub {
         }
     }
 
+    public long SPEND(long[]coins, int receiver, long value){
+        byte[] rep;
+        try {
+            GenericMessage request = new GenericMessage(GenericMessage.Type.SPEND);
+            request.setSpendingCoins(coins);
+            request.setReceiverId(receiver);
+            request.setValue(value);
+
+            //invokes BFT-SMaRt
+            rep = serviceProxy.invokeOrdered(GenericMessage.toBytes(request));
+        } catch (IOException e) {
+            System.err.println("Failed to send SPEND request");
+            return -1;
+        }
+
+        if (rep.length == 0) {
+            return -1;
+        }
+        try {
+            GenericMessage response = GenericMessage.fromBytes(rep);
+            return response.getValue();
+        } catch (ClassNotFoundException | IOException ex) {
+            System.err.println("Failed to deserialized response of SPEND request "+ex);
+            return -1;
+        }
+    }
+
     public long MINT_NFT(String name, String URI, long value) {
         byte[] rep;
         try {
