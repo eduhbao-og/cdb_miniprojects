@@ -7,4 +7,11 @@ public class Coin {
     long id;
     int owner;
     long value;
+
+    public Coin(long id, int owner, long value) {
+        this.id = id;
+        this.owner = owner;
+        this.value = value;
+    }
+    
 }

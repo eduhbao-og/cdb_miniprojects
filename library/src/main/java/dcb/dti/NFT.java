@@ -11,4 +11,12 @@ public class NFT {
     String name;
     String uri;
     long value;
+    
+    public NFT(long id, int owner, String name, String uri, long value) {
+        this.id = id;
+        this.owner = owner;
+        this.name = name;
+        this.uri = uri;
+        this.value = value;
+    }
 }
