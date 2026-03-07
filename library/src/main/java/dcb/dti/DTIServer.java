@@ -52,7 +52,15 @@ public class DTIServer extends DefaultSingleRecoverable {
                 case MY_NFTS:
                     response.setNFTs(storedNFTs);
                 case MINT:
-                    //process MINT request and fill the response...
+                    if(senderId != 4 ){
+                        return new byte[0];
+                    }
+                    Coin coin = new Coin(++ coinId, senderId, request.getValue());
+                    if(storedCoins.containsKey(coinId)){
+                        return new byte[0];
+                    }
+                    storedCoins.put(coinId, coin);
+                    response.setTokenId(coinId);
                 case BUY_NFT:
                     //process BUY_NFT request and fill the response...
                 case MINT_NFT:
@@ -95,7 +103,15 @@ public class DTIServer extends DefaultSingleRecoverable {
                 case BUY_NFT:
                     //process BUY_NFT request and fill the response...
                 case MINT:
-                    //process MINT request and fill the response...
+                    if(senderId != 4 ){
+                        return new byte[0];
+                    }
+                    Coin coin = new Coin(++ coinId, senderId, request.getValue());
+                    if(storedCoins.containsKey(coinId)){
+                        return new byte[0];
+                    }
+                    storedCoins.put(coinId, coin);
+                    response.setTokenId(coinId);
                 case MINT_NFT:
                     //process MINT_NFT request and fill the response...
                 case SEARCH_NFT:
