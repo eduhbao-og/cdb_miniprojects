@@ -87,6 +87,11 @@ public class DTIClient {
                 long newNFTId = dtiStub.MINT_NFT(name, uri, value);
                 System.out.println("\nnew NFT minted with ID: " + newNFTId + "\n"); 
             
+            } else if (cmd.equalsIgnoreCase("SET_NFT_PRICE") && value != -1 && !name.equals("")) {
+                
+                dtiStub.SET_NFT_PRICE(name, value);
+                System.out.println("\nNFT with name \"" + name + "\" set to value " + value + "\n"); 
+            
             } else if (cmd.equalsIgnoreCase("EXIT")) {
 
             } else {

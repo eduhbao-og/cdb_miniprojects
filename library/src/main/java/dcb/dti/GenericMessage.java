@@ -30,6 +30,7 @@ public class GenericMessage implements Serializable {
     private int receiverId;
     private String name;
     private String uri;
+    private NFT nft;
 
     //other possible data...
     

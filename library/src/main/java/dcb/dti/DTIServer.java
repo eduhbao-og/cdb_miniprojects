@@ -67,6 +67,7 @@ public class DTIServer extends DefaultSingleRecoverable {
                         }
                     }
                     response.setNFTs(result);
+                    break;
                 case MINT:
                     if(senderId != 4 ){
                         return new byte[0];
@@ -92,9 +93,15 @@ public class DTIServer extends DefaultSingleRecoverable {
                     }
                     storedNFTs.put(nftId, nft);
                     response.setTokenId(nftId);
+                    break;
                 case SEARCH_NFT:
                     break;
                 case SET_NFT_PRICE:
+                    for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
+                        if(entry.getValue().name.equals(request.getName()) && entry.getValue().owner == senderId) {
+                            entry.getValue().value = request.getValue();
+                        }
+                    }
                     break;
                 case SPEND:
                     long[] spendingCoins =request.getSpendingCoins();
@@ -110,24 +117,18 @@ public class DTIServer extends DefaultSingleRecoverable {
                     if(sum < value){
                         return new byte[0];
                     }
-
                     for(int i = 0; i != spendingCoins.length; i++){
                         storedCoins.remove(spendingCoins[i]);
                     }
-
                     storedCoins.put(++ coinId, new Coin(coinId, receiver, value));
-
                     response.setValue(sum - value);
-
                     if(sum - value != 0){
                         storedCoins.put(++coinId, new Coin(coinId, senderId, sum - value));
                     }
-
                     break;
                 default:
                     break;
             }
-
             return GenericMessage.toBytes(response);
         }catch (IOException | ClassNotFoundException ex) {
             System.err.println("Failed to process ordered request "+ex);
@@ -193,6 +194,11 @@ public class DTIServer extends DefaultSingleRecoverable {
                 case SEARCH_NFT:
                     break;
                 case SET_NFT_PRICE:
+                    for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
+                        if(entry.getValue().name.equals(request.getName()) && entry.getValue().owner == senderId) {
+                            entry.getValue().value = request.getValue();
+                        }
+                    }
                     break;
                 case SPEND:
                     break;
