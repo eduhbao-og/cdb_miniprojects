@@ -23,10 +23,18 @@ public class DTIClient {
         while (true) {
             String cmd = "";
             long value = -1;
+            String name = "";
+            String uri = "";
 
             try (Scanner cmdScanner = new Scanner(console.readLine("\n  > "))) {
                 if (cmdScanner.hasNext()) {
                     cmd = cmdScanner.next();
+                }
+                if (cmdScanner.hasNext()) {
+                    name = cmdScanner.next();
+                }                
+                if (cmdScanner.hasNext()) {
+                    uri = cmdScanner.next();
                 }
                 if (cmdScanner.hasNext()) {
                     value = cmdScanner.nextLong();
@@ -58,17 +66,18 @@ public class DTIClient {
                                     + ", URI: " + entry.getValue().uri);
                 }
 
+            } else if (cmd.equalsIgnoreCase("MINT_NFT") && value != -1 && !name.equals("") && !uri.equals("")) {
+                
+                long newNFTId = dtiStub.MINT_NFT(name, uri, value);
+                System.out.println("\nnew coin minted with ID: " + newNFTId + "\n"); 
+            
             } else if (cmd.equalsIgnoreCase("EXIT")) {
+
+            } else {
 
                 System.out.println("\tEXIT: Bye bye!\n");
                 System.exit(0);
 
-            } else if (cmd.equalsIgnoreCase("MINT") && value != -1) {
-
-                long newCoinId = dtiStub.mint(value);
-                System.out.println("\nnew coin minted with ID: " + newCoinId + "\n");
-
-            } else {
                 System.out.println("\tInvalid command. Here's the available commands:P\n");
                 printCommands();
             }

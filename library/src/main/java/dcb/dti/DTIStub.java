@@ -91,5 +91,32 @@ public class DTIStub {
         }
     }
 
+    public long MINT_NFT(String name, String URI, long value) {
+        byte[] rep;
+        try {
+            GenericMessage request = new GenericMessage(GenericMessage.Type.MINT_NFT);
+            request.setName(name);
+            request.setUri(URI);
+            request.setValue(value);
+
+            //invokes BFT-SMaRt
+            rep = serviceProxy.invokeOrdered(GenericMessage.toBytes(request));
+        } catch (IOException e) {
+            System.err.println("Failed to send MINT_NFT request");
+            return -1;
+        }
+
+        if (rep.length == 0) {
+            return -1;
+        }
+        try {
+            GenericMessage response = GenericMessage.fromBytes(rep);
+            return response.getTokenId();
+        } catch (ClassNotFoundException | IOException ex) {
+            System.err.println("Failed to deserialized response of MINT_NFT request "+ex);
+            return -1;
+        }
+    }
+
     //add other methods to invoke the other operations (MY_NFTS, MINT_NFT, SET_NFT_PRICE, SEARCH_NFT, BUY_NFT)...
 }

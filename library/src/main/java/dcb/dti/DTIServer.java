@@ -15,6 +15,7 @@ import java.util.TreeMap;
 public class DTIServer extends DefaultSingleRecoverable {
     private TreeMap<Long, Coin> storedCoins;
     private long coinId;
+    private long nftId;
     private TreeMap<Long, NFT> storedNFTs;
 
     //The constructor passes the id of the server to the super class
@@ -23,6 +24,7 @@ public class DTIServer extends DefaultSingleRecoverable {
         //turn-on BFT-SMaRt'replica
         new ServiceReplica(id, this, this);
         coinId = 0;
+        nftId = 0;
         storedCoins = new TreeMap<Long, Coin>();
         storedNFTs = new TreeMap<Long, NFT>();
     }
@@ -79,7 +81,17 @@ public class DTIServer extends DefaultSingleRecoverable {
                 case BUY_NFT:
                     break;
                 case MINT_NFT:
-                    break;
+                    NFT nft = new NFT(++nftId, senderId, request.getName(), request.getUri(), request.getValue());
+                    if(storedNFTs.containsKey(nftId)){
+                        return new byte[0];
+                    }
+                    for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
+                        if(entry.getValue().name.equals(nft.name)) {
+                            return new byte[0];
+                        }
+                    }
+                    storedNFTs.put(nftId, nft);
+                    response.setTokenId(nftId);
                 case SEARCH_NFT:
                     break;
                 case SET_NFT_PRICE:
