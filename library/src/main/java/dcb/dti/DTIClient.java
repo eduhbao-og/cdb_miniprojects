@@ -101,10 +101,10 @@ public class DTIClient {
     private static void printCommands() {
         System.out.println("\tMINT <Value>: Mint new coins with the specified value");
         System.out.println("\tMY_COINS: Shows your coins");
-        System.out.println("\tSPEND <Coins, Receiver, Value>: Transfers amount to receiver if coins have sufficient funds");
+        System.out.println("\tSPEND <Value, Receiver, Coins>: Transfers amount to receiver if coins have sufficient funds");
         System.out.println("\tMY_NFTS: Shows your NFTs");
-        System.out.println("\tMINT_NFT <Name, URI, Value>: Mint new NFTs with the specified parameters");
-        System.out.println("\tSET_NFT_PRICE <NFT, Value>: Sets the specified NFT's value");
+        System.out.println("\tMINT_NFT <Value, Name, URI>: Mint new NFTs with the specified parameters");
+        System.out.println("\tSET_NFT_PRICE <Value, NFT>: Sets the specified NFT's value");
         System.out.println("\tSEARCH_NFT <Text>: Searches for NFT that contains the given text");
         System.out.println("\tBUY_NFT <NFT, Coins>: Uses coins to buy the specified NFT");
         System.out.println("\tEXIT: Terminate this client\n");
