@@ -20,6 +20,8 @@ public class DTIServer extends DefaultSingleRecoverable {
 
         //turn-on BFT-SMaRt'replica
         new ServiceReplica(id, this, this);
+        storedCoins = new TreeMap<Long, Coin>();
+        storedNFTs = new TreeMap<Long, NFT>();
     }
 
     public static void main(String[] args) {
@@ -46,8 +48,10 @@ public class DTIServer extends DefaultSingleRecoverable {
                 case MY_COINS:
                     //process MYCOINS request and fill the response...
                 case MINT:
-                    //process MYCOINS request and fill the response...
-                //deal with other cases...
+                    if(senderId != 4 ){
+                        return new byte[0];
+                    }
+                    Coin coin = new Coin();
             }
 
             return GenericMessage.toBytes(response);
