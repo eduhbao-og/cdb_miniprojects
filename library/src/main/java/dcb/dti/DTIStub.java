@@ -188,12 +188,12 @@ public class DTIStub {
         }
     }
 
-     public long BUY_NFT(String name, long value) {
+     public long BUY_NFT(long value, long[] coins) {
          byte[] rep;
          try {
-             GenericMessage request = new GenericMessage(GenericMessage.Type.SET_NFT_PRICE);
-             request.setName(name);
+             GenericMessage request = new GenericMessage(GenericMessage.Type.BUY_NFT);
              request.setValue(value);
+             request.setSpendingCoins(coins);
 
             //invokes BFT-SMaRt
             rep = serviceProxy.invokeOrdered(GenericMessage.toBytes(request));
