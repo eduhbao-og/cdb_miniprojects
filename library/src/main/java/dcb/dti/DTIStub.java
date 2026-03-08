@@ -192,7 +192,7 @@ public class DTIStub {
          byte[] rep;
          try {
              GenericMessage request = new GenericMessage(GenericMessage.Type.BUY_NFT);
-             request.setValue(value);
+             request.setTokenId(value);
              request.setSpendingCoins(coins);
 
             //invokes BFT-SMaRt
