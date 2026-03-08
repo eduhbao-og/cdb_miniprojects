@@ -144,7 +144,7 @@ public class DTIStub {
         }
     }
 
-    public void SET_NFT_PRICE(String name, long value) {
+    public long SET_NFT_PRICE(String name, long value) {
         byte[] rep;
         try {
             GenericMessage request = new GenericMessage(GenericMessage.Type.SET_NFT_PRICE);
@@ -155,10 +155,17 @@ public class DTIStub {
             rep = serviceProxy.invokeOrdered(GenericMessage.toBytes(request));
         } catch (IOException e) {
             System.err.println("Failed to send SET_NFT_PRICE request");
-            return;
+            return -1;
         }
         if (rep.length == 0) {
-            return;
+            return -1;
+        }
+        try {
+            GenericMessage response = GenericMessage.fromBytes(rep);
+            return response.getValue();
+        } catch (ClassNotFoundException | IOException ex) {
+            System.err.println("Failed to deserialized response of SEARCH_NFT request "+ex);
+            return -1;
         }
     }
 
