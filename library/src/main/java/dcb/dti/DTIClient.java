@@ -89,7 +89,18 @@ public class DTIClient {
                 
                 dtiStub.SET_NFT_PRICE(name, value);
                 System.out.println("\nNFT with name \"" + name + "\" set to value " + value + "\n"); 
-            
+
+            } else if (cmd.equalsIgnoreCase("SEARCH_NFT") && !name.equals("")) {
+                
+                TreeMap<Long, NFT> nfts = dtiStub.SEARCH_NFT(name);
+                System.out.println("\nnfts: ");
+                for(Map.Entry<Long, NFT> entry : nfts.entrySet()) {
+                    System.out.println("\nid: " + entry.getKey() 
+                                    + ", name: " + entry.getValue().name 
+                                    + ", URI: " + entry.getValue().uri
+                                    + ", value: " + entry.getValue().value);
+                }
+
             } else if (cmd.equalsIgnoreCase("EXIT")) {
 
             } else {

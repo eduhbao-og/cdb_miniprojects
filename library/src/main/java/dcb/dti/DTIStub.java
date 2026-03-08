@@ -163,6 +163,31 @@ public class DTIStub {
         }
     }
 
+    public TreeMap<Long, NFT> SEARCH_NFT(String text){
+        byte[] rep;
+        try {
+            GenericMessage request = new GenericMessage(GenericMessage.Type.SEARCH_NFT);
+            request.setText(text);
+            
+            //invokes BFT-SMaRt
+            rep = serviceProxy.invokeOrdered(GenericMessage.toBytes(request));
+        } catch (IOException e) {
+            System.err.println("Failed to send SEARCH_NFT request");
+            return null;
+        }
+
+        if (rep.length == 0) {
+            return null;
+        }
+        try {
+            GenericMessage response = GenericMessage.fromBytes(rep);
+            return response.getNFTs();
+        } catch (ClassNotFoundException | IOException ex) {
+            System.err.println("Failed to deserialized response of SEARCH_NFT request "+ex);
+            return null;
+        }
+    }
+
     // public void BUY_NFT(String name, long value) {
     //     byte[] rep;
     //     try {

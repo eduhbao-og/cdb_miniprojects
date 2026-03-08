@@ -95,6 +95,14 @@ public class DTIServer extends DefaultSingleRecoverable {
                     response.setTokenId(nftId);
                     break;
                 case SEARCH_NFT:
+                    String text = request.getText();
+                    TreeMap<Long, NFT> res = new TreeMap<>();
+                    for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
+                        if(entry.getValue().name.toLowerCase().contains(text.toLowerCase())) {
+                            res.put(entry.getKey(), entry.getValue());
+                        }
+                    }
+                    response.setNFTs(res);
                     break;
                 case SET_NFT_PRICE:
                     for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
@@ -192,6 +200,14 @@ public class DTIServer extends DefaultSingleRecoverable {
                     storedNFTs.put(nftId, nft);
                     response.setTokenId(nftId);
                 case SEARCH_NFT:
+                    String text = request.getText();
+                    TreeMap<Long, NFT> res = new TreeMap<>();
+                    for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
+                        if(entry.getValue().name.toLowerCase().contains(text.toLowerCase())) {
+                            res.put(entry.getKey(), entry.getValue());
+                        }
+                    }
+                    response.setNFTs(res);
                     break;
                 case SET_NFT_PRICE:
                     for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
