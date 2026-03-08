@@ -50,24 +50,6 @@ public class DTIServer extends DefaultSingleRecoverable {
             System.out.println("Ordered execution of a "+cmd+" request from "+senderId);
 
             switch (cmd) {
-                case MY_COINS:
-                    TreeMap<Long, Coin> temp = new TreeMap<Long, Coin>();
-                    for(Map.Entry<Long, Coin> entry : storedCoins.entrySet()) {
-                        if(entry.getValue().owner == senderId){
-                            temp.put(entry.getKey(), entry.getValue());
-                        }
-                    }
-                    response.setCoins(temp);
-                    break;
-                case MY_NFTS:
-                    TreeMap<Long, NFT> result = new TreeMap<>();
-                    for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
-                        if(entry.getValue().owner == senderId) {
-                            result.put(entry.getKey(), entry.getValue());
-                        }
-                    }
-                    response.setNFTs(result);
-                    break;
                 case MINT:
                     if(senderId != 4 ){
                         return new byte[0];
@@ -120,16 +102,6 @@ public class DTIServer extends DefaultSingleRecoverable {
                     }
                     storedNFTs.put(nftId, nft);
                     response.setTokenId(nftId);
-                    break;
-                case SEARCH_NFT:
-                    String text = request.getText();
-                    TreeMap<Long, NFT> res = new TreeMap<>();
-                    for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
-                        if(entry.getValue().name.toLowerCase().contains(text.toLowerCase())) {
-                            res.put(entry.getKey(), entry.getValue());
-                        }
-                    }
-                    response.setNFTs(res);
                     break;
                 case SET_NFT_PRICE:
                     for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
@@ -201,58 +173,7 @@ public class DTIServer extends DefaultSingleRecoverable {
                         }
                     }
                     response.setNFTs(result);
-                case BUY_NFT:
-                    long[] coinsToSpend = request.getSpendingCoins();
-                    long total = 0;
-                    NFT nftToBuy = storedNFTs.get(request.getTokenId());
-                    for(int i = 0; i != coinsToSpend.length; i++){
-                        if(!storedCoins.containsKey(coinsToSpend[i]) || storedCoins.get(coinsToSpend[i]).owner != senderId){
-                            return new byte[0];
-                        }
-                        total += storedCoins.get(coinsToSpend[i]).value;
-                    }
-                    if(total < nftToBuy.value){
-                        return new byte[0];
-                    }
-                    for(int i = 0; i != coinsToSpend.length; i++){
-                        storedCoins.remove(coinsToSpend[i]);
-                    }
-                    long remainder = total - nftToBuy.value;
-                    if(remainder >= 0) {
-                        nftToBuy.owner = senderId;
-                        if(remainder == 0) {
-                            response.setValue(0);
-                        } else {
-                            storedCoins.put(++ coinId, new Coin(coinId, senderId, remainder));
-                            response.setValue(coinId);
-                        }
-                    } else {
-                        response.setValue(-1);
-                    }
                     break;
-                case MINT:
-                    if(senderId != 4 ){
-                        return new byte[0];
-                    }
-                    Coin coin = new Coin(++ coinId, senderId, request.getValue());
-                    if(storedCoins.containsKey(coinId)){
-                        return new byte[0];
-                    }
-                    storedCoins.put(coinId, coin);
-                    response.setTokenId(coinId);
-                    break;
-                case MINT_NFT:
-                    NFT nft = new NFT(++nftId, senderId, request.getName(), request.getUri(), request.getValue());
-                    if(storedNFTs.containsKey(nftId)){
-                        return new byte[0];
-                    }
-                    for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
-                        if(entry.getValue().name.equals(nft.name)) {
-                            return new byte[0];
-                        }
-                    }
-                    storedNFTs.put(nftId, nft);
-                    response.setTokenId(nftId);
                 case SEARCH_NFT:
                     String text = request.getText();
                     TreeMap<Long, NFT> res = new TreeMap<>();
@@ -262,36 +183,6 @@ public class DTIServer extends DefaultSingleRecoverable {
                         }
                     }
                     response.setNFTs(res);
-                    break;
-                case SET_NFT_PRICE:
-                    for(Map.Entry<Long, NFT> entry : storedNFTs.entrySet()) {
-                        if(entry.getValue().name.equals(request.getName()) && entry.getValue().owner == senderId) {
-                            entry.getValue().value = request.getValue();
-                        }
-                    }
-                    break;
-                case SPEND:
-                    long[] spendingCoins =request.getSpendingCoins();
-                    long sum = 0;
-                    int receiver = request.getReceiverId();
-                    long value = request.getValue();
-                    for(int i = 0; i != spendingCoins.length; i++){
-                        if(!storedCoins.containsKey(spendingCoins[i]) || storedCoins.get(spendingCoins[i]).owner != senderId){
-                            return new byte[0];
-                        }
-                        sum += storedCoins.get(spendingCoins[i]).value;
-                    }
-                    if(sum < value){
-                        return new byte[0];
-                    }
-                    for(int i = 0; i != spendingCoins.length; i++){
-                        storedCoins.remove(spendingCoins[i]);
-                    }
-                    storedCoins.put(++ coinId, new Coin(coinId, receiver, value));
-                    if(sum - value != 0){
-                        storedCoins.put(++coinId, new Coin(coinId, senderId, sum - value));
-                        response.setTokenId(coinId);
-                    }
                     break;
                 default:
                     break;

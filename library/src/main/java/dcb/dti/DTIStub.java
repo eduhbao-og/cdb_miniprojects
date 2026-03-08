@@ -41,14 +41,13 @@ public class DTIStub {
         }
     }
 
-    //MY_COINS(): get the IDs and values of the coins associated with this user.
     public TreeMap<Long, Coin> MY_COINS(){
         byte[] rep;
         try {
             GenericMessage request = new GenericMessage(GenericMessage.Type.MY_COINS);
 
             //invokes BFT-SMaRt
-            rep = serviceProxy.invokeOrdered(GenericMessage.toBytes(request));
+            rep = serviceProxy.invokeUnordered(GenericMessage.toBytes(request));
         } catch (IOException e) {
             System.err.println("Failed to send MY_COINS request");
             return null;
@@ -73,7 +72,7 @@ public class DTIStub {
             GenericMessage request = new GenericMessage(GenericMessage.Type.MY_NFTS);
 
             //invokes BFT-SMaRt
-            rep = serviceProxy.invokeOrdered(GenericMessage.toBytes(request));
+            rep = serviceProxy.invokeUnordered(GenericMessage.toBytes(request));
         } catch (IOException e) {
             System.err.println("Failed to send MY_NFTS request");
             return null;
@@ -170,7 +169,7 @@ public class DTIStub {
             request.setText(text);
             
             //invokes BFT-SMaRt
-            rep = serviceProxy.invokeOrdered(GenericMessage.toBytes(request));
+            rep = serviceProxy.invokeUnordered(GenericMessage.toBytes(request));
         } catch (IOException e) {
             System.err.println("Failed to send SEARCH_NFT request");
             return null;

@@ -86,14 +86,14 @@ public class DTIClient {
 
             } else if (cmd.equalsIgnoreCase("MINT_NFT")) {
 
-                if (cmdScanner.hasNextLong()) {
-                    value = cmdScanner.nextLong();
-                }
                 if (cmdScanner.hasNext()) {
                     name = cmdScanner.next();
                 }
                 if (cmdScanner.hasNext()) {
                     uri = cmdScanner.next();
+                }
+                if (cmdScanner.hasNextLong()) {
+                    value = cmdScanner.nextLong();
                 }
 
                 if (value != -1 && !name.equals("") && !uri.equals("")) {
@@ -102,6 +102,10 @@ public class DTIClient {
                 }
 
             } else if (cmd.equalsIgnoreCase("SET_NFT_PRICE")) {
+
+                if (cmdScanner.hasNext()) {
+                    name = cmdScanner.next();
+                }
 
                 if (cmdScanner.hasNextLong()) {
                     value = cmdScanner.nextLong();
@@ -112,9 +116,6 @@ public class DTIClient {
                     System.out.println("\nNFT with name \"" + name + "\" set to value " + value + "\n");
                 }
 
-                if (cmdScanner.hasNext()) {
-                    name = cmdScanner.next();
-                }
 
             } else if (cmd.equalsIgnoreCase("MY_NFTS")) {
 
@@ -182,6 +183,7 @@ public class DTIClient {
                 if (cmdScanner.hasNextLong()) {
                     value = cmdScanner.nextLong();
                 }
+                
                 while (cmdScanner.hasNextLong()) {
                     spendingCoins.add(cmdScanner.nextLong());
                 }
