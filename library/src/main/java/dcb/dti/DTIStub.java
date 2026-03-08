@@ -91,7 +91,7 @@ public class DTIStub {
         }
     }
 
-    public long SPEND(long[]coins, int receiver, long value){
+    public long SPEND(long[] coins, int receiver, long value){
         byte[] rep;
         try {
             GenericMessage request = new GenericMessage(GenericMessage.Type.SPEND);
@@ -188,21 +188,28 @@ public class DTIStub {
         }
     }
 
-    // public void BUY_NFT(String name, long value) {
-    //     byte[] rep;
-    //     try {
-    //         GenericMessage request = new GenericMessage(GenericMessage.Type.SET_NFT_PRICE);
-    //         request.setName(name);
-    //         request.setValue(value);
+     public long BUY_NFT(String name, long value) {
+         byte[] rep;
+         try {
+             GenericMessage request = new GenericMessage(GenericMessage.Type.SET_NFT_PRICE);
+             request.setName(name);
+             request.setValue(value);
 
-    //         //invokes BFT-SMaRt
-    //         rep = serviceProxy.invokeOrdered(GenericMessage.toBytes(request));
-    //     } catch (IOException e) {
-    //         System.err.println("Failed to send SET_NFT_PRICE request");
-    //         return;
-    //     }
-    //     if (rep.length == 0) {
-    //         return;
-    //     }
-    // }
+            //invokes BFT-SMaRt
+            rep = serviceProxy.invokeOrdered(GenericMessage.toBytes(request));
+        } catch (IOException e) {
+            System.err.println("Failed to send BUY_NFT request");
+            return -1;
+        }
+        if (rep.length == 0) {
+            return -1;
+        }
+        try {
+            GenericMessage response = GenericMessage.fromBytes(rep);
+            return response.getValue();
+        } catch (ClassNotFoundException | IOException ex) {
+            System.err.println("Failed to deserialized response of BUY_NFT request "+ex);
+            return -1;
+        }
+    }
 }

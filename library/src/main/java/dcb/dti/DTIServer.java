@@ -80,6 +80,33 @@ public class DTIServer extends DefaultSingleRecoverable {
                     response.setTokenId(coinId);
                     break;
                 case BUY_NFT:
+                    long[] coinsToSpend = request.getSpendingCoins();
+                    long total = 0;
+                    NFT nftToBuy = storedNFTs.get(request.getTokenId());
+                    for(int i = 0; i != coinsToSpend.length; i++){
+                        if(!storedCoins.containsKey(coinsToSpend[i]) || storedCoins.get(coinsToSpend[i]).owner != senderId){
+                            return new byte[0];
+                        }
+                        total += storedCoins.get(coinsToSpend[i]).value;
+                    }
+                    if(total < nftToBuy.value){
+                        return new byte[0];
+                    }
+                    for(int i = 0; i != coinsToSpend.length; i++){
+                        storedCoins.remove(coinsToSpend[i]);
+                    }
+                    long remainder = total - nftToBuy.value;
+                    if(remainder >= 0) {
+                        nftToBuy.owner = senderId;
+                        if(remainder == 0) {
+                            response.setValue(0);
+                        } else {
+                            storedCoins.put(++ coinId, new Coin(coinId, senderId, remainder));
+                            response.setValue(coinId);
+                        }
+                    } else {
+                        response.setValue(-1);
+                    }
                     break;
                 case MINT_NFT:
                     NFT nft = new NFT(++nftId, senderId, request.getName(), request.getUri(), request.getValue());
@@ -112,7 +139,7 @@ public class DTIServer extends DefaultSingleRecoverable {
                     }
                     break;
                 case SPEND:
-                    long[] spendingCoins =request.getSpendingCoins();
+                    long[] spendingCoins = request.getSpendingCoins();
                     long sum = 0;
                     int receiver = request.getReceiverId();
                     long value = request.getValue();
@@ -175,6 +202,33 @@ public class DTIServer extends DefaultSingleRecoverable {
                     }
                     response.setNFTs(result);
                 case BUY_NFT:
+                    long[] coinsToSpend = request.getSpendingCoins();
+                    long total = 0;
+                    NFT nftToBuy = storedNFTs.get(request.getTokenId());
+                    for(int i = 0; i != coinsToSpend.length; i++){
+                        if(!storedCoins.containsKey(coinsToSpend[i]) || storedCoins.get(coinsToSpend[i]).owner != senderId){
+                            return new byte[0];
+                        }
+                        total += storedCoins.get(coinsToSpend[i]).value;
+                    }
+                    if(total < nftToBuy.value){
+                        return new byte[0];
+                    }
+                    for(int i = 0; i != coinsToSpend.length; i++){
+                        storedCoins.remove(coinsToSpend[i]);
+                    }
+                    long remainder = total - nftToBuy.value;
+                    if(remainder >= 0) {
+                        nftToBuy.owner = senderId;
+                        if(remainder == 0) {
+                            response.setValue(0);
+                        } else {
+                            storedCoins.put(++ coinId, new Coin(coinId, senderId, remainder));
+                            response.setValue(coinId);
+                        }
+                    } else {
+                        response.setValue(-1);
+                    }
                     break;
                 case MINT:
                     if(senderId != 4 ){
