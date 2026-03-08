@@ -111,7 +111,7 @@ public class DTIStub {
         }
         try {
             GenericMessage response = GenericMessage.fromBytes(rep);
-            return response.getValue();
+            return response.getTokenId();
         } catch (ClassNotFoundException | IOException ex) {
             System.err.println("Failed to deserialized response of SPEND request "+ex);
             return -1;
