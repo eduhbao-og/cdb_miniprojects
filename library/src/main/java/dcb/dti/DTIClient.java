@@ -66,12 +66,12 @@ public class DTIClient {
                 while (cmdScanner.hasNextLong()) {
                     spendingCoins.add(cmdScanner.nextLong());
                 }
-
                 if (value != -1) {
                     long change = dtiStub.SPEND(spendingCoins.stream().mapToLong(Long::longValue).toArray(), receiver,
                             value);
-                    System.out.println("\nSpent coins and received change: " + change + "\n");
+                    System.out.println("\nSpent coins and change deposited in coin: " + change + "\n");
                 }
+
 
             } else if (cmd.equalsIgnoreCase("MY_NFTS")) {
 
@@ -106,13 +106,14 @@ public class DTIClient {
                 if (cmdScanner.hasNextLong()) {
                     value = cmdScanner.nextLong();
                 }
-                if (cmdScanner.hasNext()) {
-                    name = cmdScanner.next();
-                }
-
+                
                 if (value != -1 && !name.equals("")) {
                     dtiStub.SET_NFT_PRICE(name, value);
                     System.out.println("\nNFT with name \"" + name + "\" set to value " + value + "\n");
+                }
+
+                if (cmdScanner.hasNext()) {
+                    name = cmdScanner.next();
                 }
 
             } else if (cmd.equalsIgnoreCase("MY_NFTS")) {
@@ -126,12 +127,35 @@ public class DTIClient {
                             + ", value: " + entry.getValue().value);
                 }
 
-            } else if (cmd.equalsIgnoreCase("MINT_NFT") && value != -1 && !name.equals("") && !uri.equals("")) {
+            } else if (cmd.equalsIgnoreCase("MINT_NFT")) {
+                
+                if (cmdScanner.hasNext()) {
+                    name = cmdScanner.next();
+                }
+
+                if (cmdScanner.hasNext()) {
+                    uri = cmdScanner.next();
+                }
+
+                if (value != -1 && !name.equals("")) {
+                    dtiStub.SET_NFT_PRICE(name, value);
+                    System.out.println("\nNFT with name \"" + name + "\" set to value " + value + "\n");
+                }
+
 
                 long newNFTId = dtiStub.MINT_NFT(name, uri, value);
                 System.out.println("\nnew NFT minted with ID: " + newNFTId + "\n");
 
-            } else if (cmd.equalsIgnoreCase("SET_NFT_PRICE") && value != -1 && !name.equals("")) {
+            } else if (cmd.equalsIgnoreCase("SET_NFT_PRICE")) {
+
+                if (cmdScanner.hasNext()) {
+                    name = cmdScanner.next();
+                }
+
+                if (value != -1 && !name.equals("")) {
+                    dtiStub.SET_NFT_PRICE(name, value);
+                    System.out.println("\nNFT with name \"" + name + "\" set to value " + value + "\n");
+                }
 
                 dtiStub.SET_NFT_PRICE(name, value);
                 System.out.println("\nNFT with name \"" + name + "\" set to value " + value + "\n");
@@ -189,11 +213,10 @@ public class DTIClient {
     private static void printCommands() {
         System.out.println("\tMINT <Value>: Mint new coins with the specified value");
         System.out.println("\tMY_COINS: Shows your coins");
-        System.out.println(
-                "\tSPEND <Value, Receiver, Coins>: Transfers amount to receiver if coins have sufficient funds");
+        System.out.println("\tSPEND <Value, Receiver, Coins>: Transfers amount to receiver if coins have sufficient funds");
         System.out.println("\tMY_NFTS: Shows your NFTs");
-        System.out.println("\tMINT_NFT <Value, Name, URI>: Mint new NFTs with the specified parameters");
-        System.out.println("\tSET_NFT_PRICE <Value, NFT>: Sets the specified NFT's value");
+        System.out.println("\tMINT_NFT <Name, URI, Value>: Mint new NFTs with the specified parameters");
+        System.out.println("\tSET_NFT_PRICE <NFT, Value>: Sets the specified NFT's value");
         System.out.println("\tSEARCH_NFT <Text>: Searches for NFT that contains the given text");
         System.out.println("\tBUY_NFT <NFT, Coins>: Uses coins to buy the specified NFT");
         System.out.println("\tEXIT: Terminate this client\n");
