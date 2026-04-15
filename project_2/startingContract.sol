@@ -14,6 +14,8 @@ contract DecentralizedFinance is ERC20 {
         uint256 collateral;
         uint256 amount;
         uint256 deadline;
+        uint256 paymentsMade;
+        uint256 startTime;
     }
 
     mapping (uint256 => Loan) loans;
@@ -46,7 +48,13 @@ contract DecentralizedFinance is ERC20 {
     }
 
     function sellDex(uint256 dexAmount) external {
-        // TODO: implement this
+        require(balanceOf(msg.sender) >= dexAmount, "Not enough DEX tokens");
+        uint256 ethTotal = DEXtoETH(dexAmount);
+        require(balanceOf(address(this)) >= ethTotal, "Not enough ETH in contract");
+        transferFrom(msg.sender, address(this), dexAmount);
+        (bool success, ) = msg.sender.call{value: ethTotal}("");
+        require(success, "eth transfer failed");
+        balance -= ethTotal;
     }
 
     function loan(uint256 dexAmount, uint256 deadline) external {
@@ -54,25 +62,39 @@ contract DecentralizedFinance is ERC20 {
         uint ethTotal = DEXtoETH(dexAmount);
         (bool success, ) = msg.sender.call{value: ethTotal}("");
         require(success, "eth transfer failed");
-        Loan memory newLoan = Loan(msg.sender, dexAmount, ethTotal, deadline);
+        Loan memory newLoan = Loan(msg.sender, dexAmount, ethTotal, deadline, 0, block.timestamp);
         loans[counter] = newLoan;
         counter = counter + 1;
         emit loanCreated(msg.sender, ethTotal, deadline);
     }
 
-    function makePayment(uint256 loanId) external{
-
+    function makePayment(uint256 loanId) external payable {
+        Loan storage l = loans[loanId];
+        uint256 payment = (l.amount * interest) / l.deadline;
+        if (l.paymentsMade == l.deadline - 1) {
+            require(msg.value == payment + l.amount,"Incorrect Payment");
+            transferFrom(address(this), l.borrower, l.collateral);
+            emit loanFinished(l.borrower, l.amount);
+            delete loans[loanId];
+        } else {
+            require(msg.value == payment, "Incorrect payment");
+            l.paymentsMade ++;
+        }
+        balance += msg.value;
     }
 
     function terminateLoan(uint256 loanId) external payable {
         require(msg.sender == loans[loanId].borrower);
         require(msg.value == loans[loanId].amount + termination);
         transferFrom(address(this), msg.sender, loans[loanId].collateral);
+        emit loanFinished(loans[loanId].borrower, loans[loanId].amount);
         delete loans[loanId];
+        balance += msg.value;
     }
 
-    function getBalance() external{
-
+    function getBalance() view external returns (uint256){
+        require(msg.sender == owner, "Only the owner can call this function");
+        return balance;
     }
 
     function getDexBalance() view external returns (uint){
@@ -80,7 +102,13 @@ contract DecentralizedFinance is ERC20 {
     }
     
     function checkLoan(uint256 loanId) external {
-
+        require(msg.sender == owner, "Only owner can check loans");
+        Loan storage l = loans[loanId];
+        require(l.borrower != address(0), "Loan does not exist");
+        if (l.paymentsMade < (block.timestamp - l.startTime) / paymentCycle) {
+            emit loanFinished(l.borrower, l.amount);
+            delete loans[loanId];
+        }
     }
 
     function DEXtoETH(uint dexAmount) view private returns (uint) {
@@ -91,3 +119,4 @@ contract DecentralizedFinance is ERC20 {
         return (ethAmount * dexSwapRate)/10**18;
     }
 }
+
