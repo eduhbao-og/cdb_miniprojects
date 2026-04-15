@@ -75,9 +75,9 @@ contract DecentralizedFinance is ERC20 {
     }
 
     function getDexBalance() view external returns (uint){
-        return balanceOf(msg.sender);
+        return ETHtoDEX(balanceOf(msg.sender));
     }
-
+    
     function checkLoan(uint256 loanId) external {
 
     }
