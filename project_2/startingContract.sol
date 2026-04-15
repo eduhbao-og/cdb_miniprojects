@@ -5,6 +5,7 @@
 pragma solidity ^0.8.30;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "hardhat/console.sol";
 
 contract DecentralizedFinance is ERC20 {
     address payable owner;
@@ -75,7 +76,8 @@ contract DecentralizedFinance is ERC20 {
         Loan storage l = loans[loanId];
         require(loans[loanId].borrower != address(0), "Invalid loan");
         require(msg.sender == l.borrower, "Invalid loan");
-        uint256 payment = (l.amount * interest) / l.deadline;
+        uint256 payment = (l.amount * interest) / (l.deadline * 10000);
+        console.log(payment); 
         if (l.paymentsMade == l.deadline - 1) {
             require(msg.value == payment + l.amount,"Incorrect Payment");
             _transfer(address(this), l.borrower, l.collateral);
