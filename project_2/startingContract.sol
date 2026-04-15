@@ -24,7 +24,7 @@ contract DecentralizedFinance is ERC20 {
     uint256 paymentCycle;
     uint256 interest;
     uint256 termination;
-    uint256 maxLoanDuration;
+    uint256 maxLoanDuration = 12;
     uint256 dexSwapRate;
 
     event loanCreated(address borrower, uint256 amount, uint256 deadline);
@@ -32,6 +32,7 @@ contract DecentralizedFinance is ERC20 {
 
 
     constructor(uint256 swapRate, uint256 cycle, uint256 interestRate, uint256 terminationFee) ERC20("DEX", "DEX") {
+        owner = payable(msg.sender);
         _mint(address(this), 10**18);
         dexSwapRate = swapRate;
         paymentCycle = cycle;
@@ -44,14 +45,14 @@ contract DecentralizedFinance is ERC20 {
         uint dexTotal = ETHtoDEX(ethReceived);
         require(balanceOf(address(this)) >= dexTotal, "not enough dex tokens in the contract");
         balance = balance + ethReceived;
-        transferFrom(address(this), msg.sender, dexTotal);
+        _transfer(address(this), msg.sender, dexTotal);
     }
 
     function sellDex(uint256 dexAmount) external {
         require(balanceOf(msg.sender) >= dexAmount, "Not enough DEX tokens");
         uint256 ethTotal = DEXtoETH(dexAmount);
-        require(balanceOf(address(this)) >= ethTotal, "Not enough ETH in contract");
-        transferFrom(msg.sender, address(this), dexAmount);
+        require(address(this).balance >= ethTotal, "Not enough ETH in contract");
+        _transfer(msg.sender, address(this), dexAmount);
         (bool success, ) = msg.sender.call{value: ethTotal}("");
         require(success, "eth transfer failed");
         balance -= ethTotal;
@@ -59,7 +60,9 @@ contract DecentralizedFinance is ERC20 {
 
     function loan(uint256 dexAmount, uint256 deadline) external {
         require(maxLoanDuration >= deadline);
-        uint ethTotal = DEXtoETH(dexAmount);
+        _transfer(msg.sender, address(this), dexAmount);
+        uint ethTotal = DEXtoETH(dexAmount)/2;
+        require(address(this).balance >= ethTotal, "Insufficient liquidity");
         (bool success, ) = msg.sender.call{value: ethTotal}("");
         require(success, "eth transfer failed");
         Loan memory newLoan = Loan(msg.sender, dexAmount, ethTotal, deadline, 0, block.timestamp);
@@ -70,10 +73,12 @@ contract DecentralizedFinance is ERC20 {
 
     function makePayment(uint256 loanId) external payable {
         Loan storage l = loans[loanId];
+        require(loans[loanId].borrower != address(0), "Invalid loan");
+        require(msg.sender == l.borrower, "Invalid loan");
         uint256 payment = (l.amount * interest) / l.deadline;
         if (l.paymentsMade == l.deadline - 1) {
             require(msg.value == payment + l.amount,"Incorrect Payment");
-            transferFrom(address(this), l.borrower, l.collateral);
+            _transfer(address(this), l.borrower, l.collateral);
             emit loanFinished(l.borrower, l.amount);
             delete loans[loanId];
         } else {
@@ -84,9 +89,10 @@ contract DecentralizedFinance is ERC20 {
     }
 
     function terminateLoan(uint256 loanId) external payable {
+        require(loans[loanId].borrower != address(0), "Invalid loan");
         require(msg.sender == loans[loanId].borrower);
         require(msg.value == loans[loanId].amount + termination);
-        transferFrom(address(this), msg.sender, loans[loanId].collateral);
+        _transfer(address(this), msg.sender, loans[loanId].collateral);
         emit loanFinished(loans[loanId].borrower, loans[loanId].amount);
         delete loans[loanId];
         balance += msg.value;
@@ -98,7 +104,7 @@ contract DecentralizedFinance is ERC20 {
     }
 
     function getDexBalance() view external returns (uint){
-        return ETHtoDEX(balanceOf(msg.sender));
+        return balanceOf(msg.sender);
     }
     
     function checkLoan(uint256 loanId) external {
