@@ -7,18 +7,18 @@ pragma solidity ^0.8.30;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract DecentralizedFinance is ERC20 {
-    // TODO: define variables
     address payable owner;
     uint256 balance;
     struct Loan{
-        address payable borrower;
+        address borrower;
         uint256 collateral;
         uint256 amount;
         uint256 deadline;
     }
 
     mapping (uint256 => Loan) loans;
-    
+    uint256 counter = 0;
+
     uint256 paymentCycle;
     uint256 interest;
     uint256 termination;
@@ -38,7 +38,11 @@ contract DecentralizedFinance is ERC20 {
     }
 
     function buyDex() external payable {
-        // TODO: implement this
+        uint ethReceived = msg.value;
+        uint dexTotal = ETHtoDEX(ethReceived);
+        require(balanceOf(address(this)) >= dexTotal, "not enough dex tokens in the contract");
+        balance = balance + ethReceived;
+        transferFrom(address(this), msg.sender, dexTotal);
     }
 
     function sellDex(uint256 dexAmount) external {
@@ -46,27 +50,43 @@ contract DecentralizedFinance is ERC20 {
     }
 
     function loan(uint256 dexAmount, uint256 deadline) external {
-        // TODO: implement this
-
+        require(maxLoanDuration >= deadline);
+        uint ethTotal = DEXtoETH(dexAmount);
+        (bool success, ) = msg.sender.call{value: ethTotal}("");
+        require(success, "eth transfer failed");
+        Loan memory newLoan = Loan(msg.sender, dexAmount, ethTotal, deadline);
+        loans[counter] = newLoan;
+        counter = counter + 1;
+        emit loanCreated(msg.sender, ethTotal, deadline);
     }
 
     function makePayment(uint256 loanId) external{
 
     }
 
-    function terminateLoan( uint256 loanId) external{
-
+    function terminateLoan(uint256 loanId) external payable {
+        require(msg.sender == loans[loanId].borrower);
+        require(msg.value == loans[loanId].amount + termination);
+        transferFrom(address(this), msg.sender, loans[loanId].collateral);
     }
 
     function getBalance() external{
 
     }
 
-    function getDexBalance() external{
-
+    function getDexBalance() view external returns (uint){
+        return balanceOf(msg.sender);
     }
 
     function checkLoan(uint256 loanId) external {
 
+    }
+
+    function DEXtoETH(uint dexAmount) view private returns (uint) {
+        return (dexAmount * 10**18)/dexSwapRate;
+    }
+
+    function ETHtoDEX(uint ethAmount) view private returns (uint) {
+        return (ethAmount * dexSwapRate)/10**18;
     }
 }
