@@ -68,6 +68,7 @@ contract DecentralizedFinance is ERC20 {
         require(msg.sender == loans[loanId].borrower);
         require(msg.value == loans[loanId].amount + termination);
         transferFrom(address(this), msg.sender, loans[loanId].collateral);
+        delete loans[loanId];
     }
 
     function getBalance() external{
