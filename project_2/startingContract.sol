@@ -2,15 +2,54 @@
 
 /* 
     Group 13
-    Eduardo Sampaio nº gay
+    Eduardo Sampaio nº 66097
     Gonçalo Vicente nº 66118
+
+    to test first create a contract, you can use the following arguments as examples
+
+    constructor():
+        swapRate = 1000000000
+        cycle = 20
+        interestRate = 10
+        terminationFee = 100000
+    
+    then buy some dex
+    buyDex(): 1000000000000000000 wei (1 ETH)
+    
+    check your balance
+    getDexBalance()
+    
+    create a loan
+    loan():
+        ammount = 1000000 wei
+        deadline = 4
+    
+    make loan payments
+    makePayment(): 
+        12500000000000 wei (first 3 payments)
+        512500000000000 wei (last payment with termination fee)
+    
+    create another loan
+    loan():
+        ammount = 1000000 wei
+        deadline = 4
+
+    terminate the loan early
+    terminateLoan(): 500000000100000 wei
+
+    create another loan
+    loan():
+        ammount = 1000000 wei
+        deadline = 4
+
+    wait for the first payment to expire and check the loan
+    checkLoan()
 */
 
 
 pragma solidity ^0.8.30;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "hardhat/console.sol";
 
 contract DecentralizedFinance is ERC20 {
     address payable owner;
@@ -82,9 +121,7 @@ contract DecentralizedFinance is ERC20 {
         require(loans[loanId].borrower != address(0), "Invalid loan");
         require(msg.sender == l.borrower, "Invalid loan");
         uint256 payment = (l.amount * interest) / (l.deadline * 100);
-        console.log(payment); 
         if (l.paymentsMade == l.deadline - 1) {
-            console.log(payment + l.amount); 
             require(msg.value == payment + l.amount,"Incorrect Payment");
             _transfer(address(this), l.borrower, l.collateral);
             emit loanFinished(l.borrower, l.amount);
