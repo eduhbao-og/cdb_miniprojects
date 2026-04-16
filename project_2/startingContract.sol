@@ -5,7 +5,12 @@
     Eduardo Sampaio nº 66097
     Gonçalo Vicente nº 66118
 
-    to test first create a contract, you can use the following arguments as examples
+    To test, first create a contract. 
+    You can use the following arguments as examples.
+
+    ##################################
+    ### 1. Successful loan example ###
+    ##################################
 
     constructor():
         swapRate = 1000000000
@@ -13,36 +18,43 @@
         interestRate = 10
         terminationFee = 100000
     
-    then buy some dex
+    # Buy some DEX #
     buyDex(): 1000000000000000000 wei (1 ETH)
     
-    check your balance
+    # Check your balance #
     getDexBalance()
     
-    create a loan
+    # Create a loan #
     loan():
         ammount = 1000000 wei
         deadline = 4
     
-    make loan payments
+    # Make loan payments #
     makePayment(): 
         12500000000000 wei (first 3 payments)
         512500000000000 wei (last payment with termination fee)
     
-    create another loan
+    #################################
+    ### 2. Terminate loan example ###
+    #################################
+
     loan():
         ammount = 1000000 wei
         deadline = 4
 
-    terminate the loan early
+    # Terminate the loan early #
     terminateLoan(): 500000000100000 wei
 
-    create another loan
+    ##############################
+    ### 3. Failed loan example ###
+    ##############################
+
+    # Create another loan #
     loan():
         ammount = 1000000 wei
         deadline = 4
 
-    wait for the first payment to expire and check the loan
+    # Wait for the first payment to expire and check the loan #
     checkLoan()
 */
 
@@ -87,17 +99,30 @@ contract DecentralizedFinance is ERC20 {
 
     function buyDex() external payable {
         uint ethReceived = msg.value;
+
+        // convert received eth to dex
         uint dexTotal = ETHtoDEX(ethReceived);
+
+        // check if contract's balance has enough DEX
         require(balanceOf(address(this)) >= dexTotal, "not enough dex tokens in the contract");
         balance = balance + ethReceived;
+
+        // transfer DEX to client
         _transfer(address(this), msg.sender, dexTotal);
     }
 
     function sellDex(uint256 dexAmount) external {
+        // check if client has enough DEX to sell specified ammount
         require(balanceOf(msg.sender) >= dexAmount, "Not enough DEX tokens");
         uint256 ethTotal = DEXtoETH(dexAmount);
+
+        // check if contract has enough ETH to transfer
         require(address(this).balance >= ethTotal, "Not enough ETH in contract");
+
+        // make DEX transaction from client to contract
         _transfer(msg.sender, address(this), dexAmount);
+
+        // make ETH transaction from contract to client
         (bool success, ) = msg.sender.call{value: ethTotal}("");
         require(success, "eth transfer failed");
         balance -= ethTotal;
@@ -105,11 +130,17 @@ contract DecentralizedFinance is ERC20 {
 
     function loan(uint256 dexAmount, uint256 deadline) external {
         require(maxLoanDuration >= deadline);
+
+        // transfer collateral to contract
         _transfer(msg.sender, address(this), dexAmount);
         uint ethTotal = DEXtoETH(dexAmount)/2;
         require(address(this).balance >= ethTotal, "Insufficient liquidity");
+        
+        // transfer loan to client
         (bool success, ) = msg.sender.call{value: ethTotal}("");
         require(success, "eth transfer failed");
+        balance -= ethTotal;
+        
         Loan memory newLoan = Loan(msg.sender, dexAmount, ethTotal, deadline, 0, block.timestamp);
         loans[counter] = newLoan;
         counter = counter + 1;
@@ -118,15 +149,29 @@ contract DecentralizedFinance is ERC20 {
 
     function makePayment(uint256 loanId) external payable {
         Loan storage l = loans[loanId];
+        
         require(loans[loanId].borrower != address(0), "Invalid loan");
         require(msg.sender == l.borrower, "Invalid loan");
+
+        // check if payment deadline has expired
+        if (l.paymentsMade < (block.timestamp - l.startTime) / paymentCycle) {
+            emit loanFinished(l.borrower, l.amount);
+            delete loans[loanId];
+        }
+        
+        // 𝑐𝑦𝑐𝑙𝑒𝑃𝑎𝑦𝑚𝑒𝑛𝑡 = 𝑎𝑚𝑜𝑢𝑛𝑡 𝑥 𝑖𝑛𝑡𝑒𝑟𝑒𝑠𝑡 / 𝑑𝑒𝑎𝑑𝑙𝑖𝑛𝑒
+        // we divide by 100 because interest is an integer
         uint256 payment = (l.amount * interest) / (l.deadline * 100);
+
+        // check if current payment is the last one
         if (l.paymentsMade == l.deadline - 1) {
+            // final payment
             require(msg.value == payment + l.amount,"Incorrect Payment");
             _transfer(address(this), l.borrower, l.collateral);
             emit loanFinished(l.borrower, l.amount);
             delete loans[loanId];
         } else {
+            // normal payment
             require(msg.value == payment, "Incorrect payment");
             l.paymentsMade ++;
         }
@@ -137,6 +182,8 @@ contract DecentralizedFinance is ERC20 {
         require(loans[loanId].borrower != address(0), "Invalid loan");
         require(msg.sender == loans[loanId].borrower);
         require(msg.value == loans[loanId].amount + termination);
+
+        // if all conditions hold, transfer collateral back to client
         _transfer(address(this), msg.sender, loans[loanId].collateral);
         emit loanFinished(loans[loanId].borrower, loans[loanId].amount);
         delete loans[loanId];
@@ -156,7 +203,10 @@ contract DecentralizedFinance is ERC20 {
         require(msg.sender == owner, "Only owner can check loans");
         Loan storage l = loans[loanId];
         require(l.borrower != address(0), "Loan does not exist");
+
+        // check if number of payments made corresponds to number of cycles passed
         if (l.paymentsMade < (block.timestamp - l.startTime) / paymentCycle) {
+            // if some payment is late, terminate loan and keep client's collateral
             emit loanFinished(l.borrower, l.amount);
             delete loans[loanId];
         }
