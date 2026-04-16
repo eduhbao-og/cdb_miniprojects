@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
-/* 
 
+/* 
+    Group 13
+    Eduardo Sampaio nº gay
+    Gonçalo Vicente nº 66118
 */
+
+
 pragma solidity ^0.8.30;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -76,9 +81,10 @@ contract DecentralizedFinance is ERC20 {
         Loan storage l = loans[loanId];
         require(loans[loanId].borrower != address(0), "Invalid loan");
         require(msg.sender == l.borrower, "Invalid loan");
-        uint256 payment = (l.amount * interest) / (l.deadline * 10000);
+        uint256 payment = (l.amount * interest) / (l.deadline * 100);
         console.log(payment); 
         if (l.paymentsMade == l.deadline - 1) {
+            console.log(payment + l.amount); 
             require(msg.value == payment + l.amount,"Incorrect Payment");
             _transfer(address(this), l.borrower, l.collateral);
             emit loanFinished(l.borrower, l.amount);
@@ -127,4 +133,5 @@ contract DecentralizedFinance is ERC20 {
         return (ethAmount * dexSwapRate)/10**18;
     }
 }
+
 
