@@ -2,7 +2,7 @@ pragma solidity ^0.8.28;
 
 contract LoanManager {
 
-    struct Loan{
+    struct DEXLoan{
         address borrower;
         uint256 collateral;
         uint256 amount;
@@ -11,32 +11,46 @@ contract LoanManager {
         uint256 startTime;
     }
 
-    mapping (uint256 => Loan) loans;
-    uint256 counter = 0;
+    struct NFTLoan{
+        address borrower;
+        address provider;
+        uint256 collateral;
+        uint256 amount;
+        uint256 deadline;
+        uint256 paymentsMade;
+        uint256 startTime;
+    }
 
+    mapping (uint256 => DEXLoan) DEXloans;
+    mapping (uint256 => NFTLoan) NFTloans;
+
+    uint256 loanCounter = 0;
     uint256 paymentCycle;
     uint256 interest;
     uint256 termination;
     uint256 maxLoanDuration;
+
     uint256 dexSwapRate;
 
-    event loanCreated(address borrower, uint256 amount, uint256 deadline);
-    event loanFinished(address borrower, uint256 amount);
+    event DEXloanCreated(address borrower, uint256 amount, uint256 deadline);
+    event DEXloanFinished(address borrower, uint256 amount);
+    event NFTloanCreated(address borrower, address provider, uint256 amount, uint256 deadline);
+    event NFTloanFinished(address borrower, address provider, uint256 amount);
 
-    function checkLoan(uint256 loanId) external {
-        require(msg.sender == owner, "Only owner can check loans");
-        Loan storage l = loans[loanId];
+    function checkDEXLoan(uint256 loanId) external {
+        require(msg.sender == owner, "Only owner can check DEX loans");
+        DEXLoan storage l = DEXloans[loanId];
         require(l.borrower != address(0), "Loan does not exist");
 
         // check if number of payments made corresponds to number of cycles passed
         if (l.paymentsMade < (block.timestamp - l.startTime) / paymentCycle) {
             // if some payment is late, terminate loan and keep client's collateral
-            emit loanFinished(l.borrower, l.amount);
-            delete loans[loanId];
+            emit DEXloanFinished(l.borrower, l.amount);
+            delete DEXloans[loanId];
         }
     }
     
-    function loan(uint256 dexAmount, uint256 deadline) external {
+    function loanDEX(uint256 dexAmount, uint256 deadline) external {
         require(maxLoanDuration >= deadline);
 
         // transfer collateral to contract
@@ -51,22 +65,22 @@ contract LoanManager {
         (bool success, ) = msg.sender.call{value: ethTotal}("");
         require(success, "eth transfer failed");
         
-        Loan memory newLoan = Loan(msg.sender, dexAmount, ethTotal, deadline, 0, block.timestamp);
-        loans[counter] = newLoan;
-        counter = counter + 1;
-        emit loanCreated(msg.sender, ethTotal, deadline);
+        DEXLoan memory newLoan = Loan(msg.sender, dexAmount, ethTotal, deadline, 0, block.timestamp);
+        DEXloans[loanCounter] = newLoan;
+        loanCounter = loanCounter + 1;
+        emit DEXloanCreated(msg.sender, ethTotal, deadline);
     }
 
-    function makePayment(uint256 loanId) external payable {
-        Loan storage l = loans[loanId];
+    function makeDEXLoanPayment(uint256 loanId) external payable {
+        DEXLoan storage l = DEXloans[loanId];
         
-        require(loans[loanId].borrower != address(0), "Invalid loan");
+        require(DEXloans[loanId].borrower != address(0), "Invalid loan");
         require(msg.sender == l.borrower, "Invalid loan");
 
         // check if payment deadline has expired
         if (l.paymentsMade < (block.timestamp - l.startTime) / paymentCycle) {
-            emit loanFinished(l.borrower, l.amount);
-            delete loans[loanId];
+            emit DEXloanFinished(l.borrower, l.amount);
+            delete DEXloans[loanId];
             return;
         }
         
@@ -79,8 +93,8 @@ contract LoanManager {
             // final payment
             require(msg.value == payment + l.amount,"Incorrect Payment");
             _transfer(address(this), l.borrower, l.collateral);
-            emit loanFinished(l.borrower, l.amount);
-            delete loans[loanId];
+            emit DEXloanFinished(l.borrower, l.amount);
+            delete DEXloans[loanId];
         } else {
             // normal payment
             require(msg.value == payment, "Incorrect payment");
@@ -89,28 +103,28 @@ contract LoanManager {
         balance += msg.value;
     }
 
-    function terminateLoan(uint256 loanId) external payable {
-        require(loans[loanId].borrower != address(0), "Invalid loan");
-        require(msg.sender == loans[loanId].borrower);
-        require(msg.value == loans[loanId].amount + termination);
+    function terminateDEXLoan(uint256 loanId) external payable {
+        require(DEXloans[loanId].borrower != address(0), "Invalid loan");
+        require(msg.sender == DEXloans[loanId].borrower);
+        require(msg.value == DEXloans[loanId].amount + termination);
 
         // if all conditions hold, transfer collateral back to client
-        _transfer(address(this), msg.sender, loans[loanId].collateral);
-        emit loanFinished(loans[loanId].borrower, loans[loanId].amount);
-        delete loans[loanId];
+        _transfer(address(this), msg.sender, DEXloans[loanId].collateral);
+        emit DEXloanFinished(DEXloans[loanId].borrower, DEXloans[loanId].amount);
+        delete DEXloans[loanId];
         balance += msg.value;
     }
 
-    function checkLoan(uint256 loanId) external {
+    function checkDEXLoan(uint256 loanId) external {
         require(msg.sender == owner, "Only owner can check loans");
-        Loan storage l = loans[loanId];
+        DEXLoan storage l = DEXloans[loanId];
         require(l.borrower != address(0), "Loan does not exist");
 
         // check if number of payments made corresponds to number of cycles passed
         if (l.paymentsMade < (block.timestamp - l.startTime) / paymentCycle) {
             // if some payment is late, terminate loan and keep client's collateral
-            emit loanFinished(l.borrower, l.amount);
-            delete loans[loanId];
+            emit DEXloanFinished(l.borrower, l.amount);
+            delete DEXloans[loanId];
         }
     }
 
