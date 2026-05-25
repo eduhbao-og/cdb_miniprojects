@@ -1,4 +1,4 @@
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.28;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -101,6 +101,7 @@ contract DEXContract is ERC20 {
         if (l.paymentsMade < (block.timestamp - l.startTime) / paymentCycle) {
             emit loanFinished(l.borrower, l.amount);
             delete loans[loanId];
+            return;
         }
         
         // 𝑐𝑦𝑐𝑙𝑒𝑃𝑎𝑦𝑚𝑒𝑛𝑡 = 𝑎𝑚𝑜𝑢𝑛𝑡 𝑥 𝑖𝑛𝑡𝑒𝑟𝑒𝑠𝑡 / 𝑑𝑒𝑎𝑑𝑙𝑖𝑛𝑒
