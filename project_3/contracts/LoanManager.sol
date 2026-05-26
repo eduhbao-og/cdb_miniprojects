@@ -1,6 +1,8 @@
 pragma solidity ^0.8.28;
 
-contract LoanManager {
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract LoanManager is Ownable {
 
     struct DEXLoan{
         address borrower;
@@ -126,6 +128,28 @@ contract LoanManager {
             emit DEXloanFinished(l.borrower, l.amount);
             delete DEXloans[loanId];
         }
+    }
+
+    // ### ADMIN FUNCTIONS ###
+
+    function setPaymentCycle(uint256 value) external isOwner {
+        paymentCycle = value;
+    }
+
+    function setInterest(uint256 value) external isOwner {
+        interest = value;
+    }
+
+    function setTerminationFee(uint256 value) external isOwner {
+        termination = value;
+    }
+
+    function setMaxLoanDuration(uint256 value) external isOwner {
+        maxLoanDuration = value;
+    }
+
+    function setDexSwapRate(uint256 value) external isOwner {
+        dexSwapRate = value;
     }
 
 }
