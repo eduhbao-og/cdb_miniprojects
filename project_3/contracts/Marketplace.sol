@@ -3,8 +3,9 @@ pragma solidity ^0.8.28;
 import {IDEX} from "./IDEX.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract Marketplace is ERC721Holder {
+contract Marketplace is ERC721Holder, ReentrancyGuard {
 
     IERC721 public nftContract;
     IDEX public dexContract;
@@ -43,20 +44,20 @@ contract Marketplace is ERC721Holder {
     function buyDex() external payable {
         require(msg.value > 0, "No ETH provided");
 
-        uint256 dexTotal = IDEX(dexContract).ETHtoDEX(msg.value);
-        require(IDEX(dexContract).balanceOf(address(this)) >= dexTotal, "Not enough DEX tokens in contract");
+        uint256 dexTotal = dexContract.ETHtoDEX(msg.value);
+        require(dexContract.balanceOf(address(this)) >= dexTotal, "Not enough DEX tokens in contract");
 
-        IDEX(dexContract).transfer(msg.sender, dexTotal);
+        dexContract.transfer(msg.sender, dexTotal);
     }
 
-    function sellDex(uint256 dexAmount) external {
+    function sellDex(uint256 dexAmount) external nonReentrant {
         require(dexAmount > 0, "DEX amount must be greater than zero");
-        require(IDEX(dexContract).balanceOf(msg.sender) >= dexAmount, "Not enough DEX tokens");
+        require(dexContract.balanceOf(msg.sender) >= dexAmount, "Not enough DEX tokens");
 
-        uint256 ethTotal = IDEX(dexContract).DEXtoETH(dexAmount);
+        uint256 ethTotal = dexContract.DEXtoETH(dexAmount);
         require(address(this).balance >= ethTotal, "Not enough ETH in contract");
 
-        IDEX(dexContract).transferFrom(msg.sender, address(this), dexAmount);
+        dexContract.transferFrom(msg.sender, address(this), dexAmount);
 
         (bool success, ) = msg.sender.call{value: ethTotal}("");
         require(success, "ETH transfer failed");
@@ -74,7 +75,7 @@ contract Marketplace is ERC721Holder {
         emit ItemListed(msg.sender, tokenId, price);
     }
 
-    function buyNFT(uint256 tokenId) external payable {
+    function buyNFT(uint256 tokenId) external payable nonReentrant {
         Sale storage sale = sales[tokenId];
         require(sale.active, "Token not for sale");
         require(msg.value >= sale.price, "Insufficient payment amount");
@@ -120,7 +121,7 @@ contract Marketplace is ERC721Holder {
         emit AuctionCreated(msg.sender, tokenId, minimumPrice, duration);
     }
 
-    function bid(uint256 tokenId) external payable {
+    function bid(uint256 tokenId) external payable nonReentrant {
         Auction storage auctionItem = auctions[tokenId];
         require(auctionItem.active, "Auction is not active");
         require(block.timestamp < auctionItem.endTime, "Auction already ended");
@@ -138,7 +139,7 @@ contract Marketplace is ERC721Holder {
         emit AuctionBid(msg.sender, tokenId, msg.value);
     }
 
-    function endAuction(uint256 tokenId) external {
+    function endAuction(uint256 tokenId) external nonReentrant {
         Auction storage auctionItem = auctions[tokenId];
         require(auctionItem.active, "Auction is not active");
         require(block.timestamp >= auctionItem.endTime, "Auction has not ended");
