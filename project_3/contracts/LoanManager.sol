@@ -1,10 +1,15 @@
 pragma solidity ^0.8.28;
 
+import {IDEX} from "./IDEX.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract LoanManager is Ownable {
+contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
 
-    struct DEXLoan{
+    struct DEXLoan {
         address borrower;
         uint256 collateral;
         uint256 amount;
@@ -13,7 +18,7 @@ contract LoanManager is Ownable {
         uint256 startTime;
     }
 
-    struct NFTLoan{
+    struct NFTLoan {
         address borrower;
         address provider;
         uint256 collateral;
@@ -23,116 +28,216 @@ contract LoanManager is Ownable {
         uint256 startTime;
     }
 
-    mapping (uint256 => DEXLoan) DEXloans;
-    mapping (uint256 => NFTLoan) NFTloans;
+    mapping(uint256 => DEXLoan) public DEXloans;
+    mapping(uint256 => NFTLoan) public NFTloans;
 
-    uint256 loanCounter = 0;
-    uint256 paymentCycle;
-    uint256 interest;
-    uint256 termination;
-    uint256 maxLoanDuration;
+    uint256 public loanCounter;
+    uint256 public paymentCycle;
+    uint256 public interest;
+    uint256 public termination;
+    uint256 public maxLoanDuration;
 
-    uint256 dexSwapRate;
+    IDEX public dex;
+    IERC721 public nft;
 
-    event DEXloanCreated(address borrower, uint256 amount, uint256 deadline);
-    event DEXloanFinished(address borrower, uint256 amount);
-    event NFTloanCreated(address borrower, address provider, uint256 amount, uint256 deadline);
-    event NFTloanFinished(address borrower, address provider, uint256 amount);
-
-    function checkDEXLoan(uint256 loanId) external {
-        require(msg.sender == owner, "Only owner can check DEX loans");
-        DEXLoan storage l = DEXloans[loanId];
-        require(l.borrower != address(0), "Loan does not exist");
-
-        // check if number of payments made corresponds to number of cycles passed
-        if (l.paymentsMade < (block.timestamp - l.startTime) / paymentCycle) {
-            // if some payment is late, terminate loan and keep client's collateral
-            emit DEXloanFinished(l.borrower, l.amount);
-            delete DEXloans[loanId];
-        }
+    constructor(
+            address dexAddress,
+            address nftAddress,
+            uint256 loan, 
+            uint256 cycle, 
+            uint256 interestRate, 
+            uint256 terminationFee, 
+            uint256 duration) Ownable(msg.sender) {
+        dex = IDEX(dexAddress);
+        nft = IERC721(nftAddress);
+        loanCounter = loan;
+        paymentCycle = cycle;
+        interest = interestRate;
+        termination = terminationFee;
+        maxLoanDuration = duration;
     }
-    
-    function loanDEX(uint256 dexAmount, uint256 deadline) external {
-        require(maxLoanDuration >= deadline);
 
-        // transfer collateral to contract
-        _transfer(msg.sender, address(this), dexAmount);
-        uint ethTotal = DEXtoETH(dexAmount)/2;
-        require(address(this).balance >= ethTotal, "Insufficient liquidity");
+    event DEXloanCreated(address indexed borrower, uint256 amount, uint256 deadline);
+    event DEXloanFinished(address indexed borrower, uint256 amount);
+    event NFTloanRequested(address indexed borrower, uint256 amount, uint256 deadline);
+    event NFTloanCreated(address indexed borrower, address indexed provider, uint256 amount, uint256 deadline);
+    event NFTloanFinished(address indexed borrower, address indexed provider, uint256 amount);
 
-        // effects before interactions
-        balance -= ethTotal;
-        
-        // transfer loan to client
-        (bool success, ) = msg.sender.call{value: ethTotal}("");
-        require(success, "eth transfer failed");
-        
-        DEXLoan memory newLoan = Loan(msg.sender, dexAmount, ethTotal, deadline, 0, block.timestamp);
-        DEXloans[loanCounter] = newLoan;
-        loanCounter = loanCounter + 1;
-        emit DEXloanCreated(msg.sender, ethTotal, deadline);
+    receive() external payable {}
+
+    function loanDEX(uint256 dexAmount, uint256 deadline) external nonReentrant {
+        require(dexAmount > 0, "Invalid collateral amount");
+        require(deadline > 0 && deadline <= maxLoanDuration, "Invalid deadline");
+
+        uint256 loanValue = dex.DEXtoETH(dexAmount) / 2;
+        require(loanValue > 0, "Loan value too small");
+        require(address(this).balance >= loanValue, "Insufficient liquidity");
+
+        require(dex.transferFrom(msg.sender, address(this), dexAmount), "DEX transfer failed");
+
+        DEXloans[loanCounter] = DEXLoan({
+            borrower: msg.sender,
+            collateral: dexAmount,
+            amount: loanValue,
+            deadline: deadline,
+            paymentsMade: 0,
+            startTime: block.timestamp
+        });
+
+        emit DEXloanCreated(msg.sender, loanValue, deadline);
+        loanCounter++;
+
+        (bool success, ) = msg.sender.call{value: loanValue}("");
+        require(success, "ETH transfer failed");
     }
 
     function makeDEXLoanPayment(uint256 loanId) external payable {
-        DEXLoan storage l = DEXloans[loanId];
-        
-        require(DEXloans[loanId].borrower != address(0), "Invalid loan");
-        require(msg.sender == l.borrower, "Invalid loan");
+        DEXLoan storage loan = DEXloans[loanId];
+        require(msg.sender == loan.borrower, "Only borrower can pay");
 
-        // check if payment deadline has expired
-        if (l.paymentsMade < (block.timestamp - l.startTime) / paymentCycle) {
-            emit DEXloanFinished(l.borrower, l.amount);
+        uint256 cyclesPassed = (block.timestamp - loan.startTime) / paymentCycle;
+        if (cyclesPassed > loan.paymentsMade) {
+            emit DEXloanFinished(loan.borrower, loan.amount);
             delete DEXloans[loanId];
             return;
         }
-        
-        // 𝑐𝑦𝑐𝑙𝑒𝑃𝑎𝑦𝑚𝑒𝑛𝑡 = 𝑎𝑚𝑜𝑢𝑛𝑡 𝑥 𝑖𝑛𝑡𝑒𝑟𝑒𝑠𝑡 / 𝑑𝑒𝑎𝑑𝑙𝑖𝑛𝑒
-        // we divide by 100 because interest is an integer
-        uint256 payment = (l.amount * interest) / (l.deadline * 100);
 
-        // check if current payment is the last one
-        if (l.paymentsMade == l.deadline - 1) {
-            // final payment
-            require(msg.value == payment + l.amount,"Incorrect Payment");
-            _transfer(address(this), l.borrower, l.collateral);
-            emit DEXloanFinished(l.borrower, l.amount);
+        uint256 payment = (loan.amount * interest) / (loan.deadline * 100);
+
+        if (loan.paymentsMade == loan.deadline - 1) {
+            require(msg.value == payment + loan.amount, "Incorrect final payment");
+            require(dex.transfer(loan.borrower, loan.collateral), "Collateral return failed");
+            emit DEXloanFinished(loan.borrower, loan.amount);
             delete DEXloans[loanId];
         } else {
-            // normal payment
             require(msg.value == payment, "Incorrect payment");
-            l.paymentsMade ++;
+            loan.paymentsMade++;
         }
-        balance += msg.value;
     }
 
     function terminateDEXLoan(uint256 loanId) external payable {
-        require(DEXloans[loanId].borrower != address(0), "Invalid loan");
-        require(msg.sender == DEXloans[loanId].borrower);
-        require(msg.value == DEXloans[loanId].amount + termination);
+        DEXLoan storage loan = DEXloans[loanId];
+        require(msg.sender == loan.borrower, "Only borrower can terminate");
+        require(msg.value == loan.amount + termination, "Incorrect termination payment");
 
-        // if all conditions hold, transfer collateral back to client
-        _transfer(address(this), msg.sender, DEXloans[loanId].collateral);
-        emit DEXloanFinished(DEXloans[loanId].borrower, DEXloans[loanId].amount);
+        require(dex.transfer(msg.sender, loan.collateral), "Collateral return failed");
+        emit DEXloanFinished(loan.borrower, loan.amount);
         delete DEXloans[loanId];
-        balance += msg.value;
     }
 
     function checkDEXLoan(uint256 loanId) external {
-        require(msg.sender == owner, "Only owner can check loans");
-        DEXLoan storage l = DEXloans[loanId];
-        require(l.borrower != address(0), "Loan does not exist");
+        DEXLoan storage loan = DEXloans[loanId];
+        require(loan.borrower != address(0), "Loan does not exist");
 
-        // check if number of payments made corresponds to number of cycles passed
-        if (l.paymentsMade < (block.timestamp - l.startTime) / paymentCycle) {
-            // if some payment is late, terminate loan and keep client's collateral
-            emit DEXloanFinished(l.borrower, l.amount);
+        uint256 cyclesPassed = (block.timestamp - loan.startTime) / paymentCycle;
+        if (cyclesPassed > loan.paymentsMade) {
+            emit DEXloanFinished(loan.borrower, loan.amount);
             delete DEXloans[loanId];
         }
     }
 
-    // ### ADMIN FUNCTIONS ###
+    function requestLoanNFT(uint256 loanValue, uint256 tokenId, uint256 deadline) external nonReentrant {
+        require(nft.ownerOf(tokenId) == msg.sender, "Not NFT owner");
+        require(deadline > 0 && deadline <= maxLoanDuration, "Invalid deadline");
+
+        require(loanValue > 0, "Loan value too small");
+        require(address(this).balance >= loanValue, "Insufficient liquidity");
+
+        nft.safeTransferFrom(msg.sender, address(this), tokenId);
+
+        NFTloans[tokenId] = NFTLoan({
+            borrower: msg.sender,
+            provider: address(0),
+            collateral: dex.ETHtoDEX(loanValue) * 2,
+            amount: loanValue,
+            deadline: deadline,
+            paymentsMade: 0,
+            startTime: 0
+        });
+
+        emit NFTloanRequested(msg.sender, loanValue, deadline);
+    }
+
+    function loanNFT(uint256 tokenId) external nonReentrant {
+        
+        NFTLoan storage loan = NFTloans[tokenId];
+        
+        require(loan.provider == address(0), "Loan Already has provider");
+        require(loan.borrower != msg.sender, "Cannot place collateral on self NFT loan");
+
+        require(dex.balanceOf(msg.sender) >= loan.collateral, "Not enough DEX tokens");
+        require(address(this).balance >= loan.amount, "Insufficient liquidity");
+
+        require(dex.transferFrom(msg.sender, address(this), loan.collateral), "DEX transfer failed");
+
+        NFTloans[tokenId].provider = msg.sender;
+        NFTloans[tokenId].startTime = block.timestamp;
+
+        emit NFTloanCreated(loan.borrower, loan.provider, loan.amount, loan.deadline);
+        (bool success, ) = msg.sender.call{value: loan.amount}("");
+        require(success, "ETH transfer failed");
+    }
+
+    function makeNFTLoanPayment(uint256 tokenId) external payable nonReentrant{
+        NFTLoan storage loan = NFTloans[tokenId];
+        require(msg.sender == loan.borrower, "Only borrower can pay");
+
+        uint256 cyclesPassed = (block.timestamp - loan.startTime) / paymentCycle;
+        if (cyclesPassed > loan.paymentsMade) {
+            nft.safeTransferFrom(address(this), loan.provider, tokenId);
+            emit NFTloanFinished(loan.borrower, loan.provider, loan.amount);
+            delete NFTloans[tokenId];
+            return;
+        }
+
+        uint256 payment = (loan.amount * interest) / (loan.deadline * 100);
+
+        if (loan.paymentsMade == loan.deadline - 1) {
+            require(msg.value == payment + loan.amount, "Incorrect final payment");
+
+            require(dex.transfer(loan.provider, loan.collateral), "Collateral return failed");
+            (bool success, ) = loan.provider.call{value: (loan.amount * interest) / (2 * 100)}("");
+            require(success, "ETH transfer failed");
+
+            nft.safeTransferFrom(address(this), msg.sender, tokenId);
+
+            emit NFTloanFinished(loan.borrower, loan.provider, loan.amount);
+            delete NFTloans[tokenId];
+        } else {
+            require(msg.value == payment, "Incorrect payment");
+            loan.paymentsMade++;
+        }
+    }
+
+    function terminateNFTLoan(uint256 tokenId) external payable nonReentrant{
+        NFTLoan storage loan = NFTloans[tokenId];
+        require(msg.sender == loan.borrower, "Only borrower can terminate");
+        require(msg.value == loan.amount + termination, "Incorrect termination payment");
+
+        require(dex.transfer(loan.provider, loan.collateral), "Collateral return failed");
+        (bool success, ) = loan.provider.call{value: termination}("");
+        require(success, "ETH transfer failed");
+
+        nft.safeTransferFrom(address(this), msg.sender, tokenId);
+    
+        emit NFTloanFinished(loan.borrower, loan.provider,loan.amount);
+        delete NFTloans[tokenId];
+    }
+
+    function checkNFTLoan(uint256 tokenId) external {
+        NFTLoan storage loan = NFTloans[tokenId];
+        require(loan.borrower != address(0), "Loan does not exist");
+
+        uint256 cyclesPassed = (block.timestamp - loan.startTime) / paymentCycle;
+        if (cyclesPassed > loan.paymentsMade) {
+            nft.safeTransferFrom(address(this), loan.provider, tokenId);
+            emit NFTloanFinished(loan.borrower, loan.provider, loan.amount);
+            delete NFTloans[tokenId];
+        }
+    }    
 
     function setPaymentCycle(uint256 value) external onlyOwner {
+        require(value > 0, "Payment cycle must be positive");
         paymentCycle = value;
     }
 
@@ -147,9 +252,4 @@ contract LoanManager is Ownable {
     function setMaxLoanDuration(uint256 value) external onlyOwner {
         maxLoanDuration = value;
     }
-
-    function setDexSwapRate(uint256 value) external onlyOwner {
-        dexSwapRate = value;
-    }
-
 }
