@@ -11,6 +11,7 @@ contract DEXContract is ERC20, Ownable {
         require(swapRate > 0, "Swap rate must be positive");
         dexSwapRate = swapRate;
         _mint(address(this), 10**18);
+        _transfer(address(this), msg.sender, 10**18);
     }
 
     function DEXtoETH(uint256 dexAmount) public view returns (uint256) {
