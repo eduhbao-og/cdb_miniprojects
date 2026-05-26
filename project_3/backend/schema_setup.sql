@@ -11,8 +11,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE nfts (
-    id SERIAL PRIMARY KEY,
-    token_id INTEGER UNIQUE NOT NULL,
+    id INTEGER UNIQUE NOT NULL PRIMARY KEY,
     uri TEXT NOT NULL,
     owner_id INTEGER REFERENCES users(id)
 );
@@ -36,11 +35,22 @@ CREATE TABLE auctions (
     active BOOLEAN DEFAULT TRUE
 );
 
-CREATE TABLE loans (
+CREATE TABLE DEXloans (
+    id SERIAL PRIMARY KEY,
+    borrower_id INTEGER REFERENCES users(id),
+    loan_amount NUMERIC(20, 0) NOT NULL,
+    interest_rate NUMERIC(10, 5) NOT NULL,
+    duration INTEGER NOT NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL
+);
+
+CREATE TABLE NFTLoans (
     id SERIAL PRIMARY KEY,
     nft_id INTEGER REFERENCES nfts(id),
     borrower_id INTEGER REFERENCES users(id),
-    loan_amount NUMERIC(20, 0) NOT NULL,
+    provider_id INTEGER REFERENCES users(id),
+    amount NUMERIC(20, 0) NOT NULL,
     interest_rate NUMERIC(10, 5) NOT NULL,
     duration INTEGER NOT NULL,
     start_time TIMESTAMP NOT NULL,
