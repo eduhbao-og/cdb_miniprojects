@@ -132,23 +132,23 @@ contract LoanManager is Ownable {
 
     // ### ADMIN FUNCTIONS ###
 
-    function setPaymentCycle(uint256 value) external isOwner {
+    function setPaymentCycle(uint256 value) external onlyOwner {
         paymentCycle = value;
     }
 
-    function setInterest(uint256 value) external isOwner {
+    function setInterest(uint256 value) external onlyOwner {
         interest = value;
     }
 
-    function setTerminationFee(uint256 value) external isOwner {
+    function setTerminationFee(uint256 value) external onlyOwner {
         termination = value;
     }
 
-    function setMaxLoanDuration(uint256 value) external isOwner {
+    function setMaxLoanDuration(uint256 value) external onlyOwner {
         maxLoanDuration = value;
     }
 
-    function setDexSwapRate(uint256 value) external isOwner {
+    function setDexSwapRate(uint256 value) external onlyOwner {
         dexSwapRate = value;
     }
 
