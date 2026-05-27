@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DefiNexus — Premium DApp Portal</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg-grad: linear-gradient(135deg, #060913 0%, #0d1527 100%);
+        --card-bg: rgba(13, 22, 43, 0.45);
+        --card-border: rgba(255, 255, 255, 0.07);
+        --card-border-hover: rgba(255, 69, 0, 0.4);
+        --text: #e2e8f0;
+        --text-muted: #94a3b8;
+        --primary: #ff4500;
+        --primary-glow: rgba(255, 69, 0, 0.35);
+        --secondary: #8b5cf6;
+        --secondary-glow: rgba(139, 92, 246, 0.25);
+        --success: #10b981;
+        --danger: #ef4444;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html, body {
+        height: 100%;
+        background: var(--bg-grad) no-repeat fixed;
+        color: var(--text);
+        font-family: 'Outfit', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #060913;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--primary);
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 20px;
+      }
+
+      /* Premium Header */
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 30px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 30px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-logo {
+        width: 42px;
+        height: 42px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        border-radius: 12px;
+        box-shadow: 0 4px 15px var(--primary-glow);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 20px;
+        color: #fff;
+      }
+
+      .brand h1 {
+        font-size: 24px;
+        font-weight: 700;
+        background: linear-gradient(90deg, #fff, var(--text-muted));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .wallet-panel {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .balances {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        font-size: 13px;
+        gap: 2px;
+      }
+
+      .balance-item {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        display: flex;
+        gap: 6px;
+      }
+
+      .balance-item span {
+        font-weight: 600;
+        color: #fff;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, var(--primary), #e03d00);
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 15px var(--primary-glow);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 69, 0, 0.5);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .btn:disabled {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-muted);
+        box-shadow: none;
+        cursor: not-allowed;
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: none;
+      }
+
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        box-shadow: none;
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .btn-accent {
+        background: linear-gradient(135deg, var(--secondary), #7c3aed);
+        box-shadow: 0 4px 15px var(--secondary-glow);
+      }
+
+      .btn-accent:hover {
+        box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+      }
+
+      .btn-danger {
+        background: linear-gradient(135deg, var(--danger), #dc2626);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+      }
+
+      .btn-danger:hover {
+        box-shadow: 0 6px 15px rgba(239, 68, 68, 0.4);
+      }
+
+      /* Tabs Navigation */
+      .nav-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 30px;
+        background: rgba(255, 255, 255, 0.02);
+        padding: 6px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+      }
+
+      .tab-btn {
+        flex: 1;
+        background: transparent;
+        border: none;
+        padding: 12px 16px;
+        color: var(--text-muted);
+        font-family: inherit;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .tab-btn:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .tab-btn.active {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Sections & Panels */
+      .tab-panel {
+        display: block;
+        animation: fadeIn 0.4s ease;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Grid System */
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-bottom: 24px;
+      }
+
+      .grid-dynamic {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+        margin-bottom: 24px;
+      }
+
+      @media (max-width: 768px) {
+        .grid-2, .grid-3 {
+          grid-template-columns: 1fr;
+        }
+        header {
+          flex-direction: column;
+          gap: 16px;
+          align-items: stretch;
+        }
+        .wallet-panel {
+          justify-content: space-between;
+        }
+        .nav-tabs {
+          flex-direction: column;
+        }
+      }
+
+      /* Glassmorphic Cards */
+      .card {
+        background: var(--card-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: 24px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      }
+
+      .card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+        transition: all 0.3s ease;
+      }
+
+      .card:hover {
+        border-color: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+      }
+
+      .card.glow-primary:hover {
+        border-color: var(--card-border-hover);
+        box-shadow: 0 8px 30px rgba(255, 69, 0, 0.15);
+      }
+
+      .card-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 10px;
+      }
+
+      /* NFT Card Element */
+      .nft-item {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 16px;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .nft-item:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .nft-media {
+        aspect-ratio: 1;
+        background: linear-gradient(135deg, #1e293b, #0f172a);
+        border-radius: 8px;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 32px;
+        color: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        position: relative;
+        text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      }
+
+      .nft-media::after {
+        content: "⚡";
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        font-size: 14px;
+        opacity: 0.6;
+      }
+
+      .nft-id {
+        font-weight: 700;
+        font-size: 16px;
+        color: #fff;
+        margin-bottom: 4px;
+      }
+
+      .nft-owner, .nft-seller {
+        font-size: 12px;
+        color: var(--text-muted);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+
+      .nft-price {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 12px;
+      }
+
+      /* Control Inputs & Forms */
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      label {
+        display: block;
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+        font-weight: 500;
+      }
+
+      .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      input {
+        width: 100%;
+        background: rgba(5, 8, 17, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 12px 14px;
+        color: #fff;
+        font-family: inherit;
+        font-size: 14px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 10px rgba(255, 69, 0, 0.15);
+      }
+
+      .input-suffix {
+        position: absolute;
+        right: 14px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+
+      /* Drawer Actions */
+      .action-drawer {
+        background: rgba(255, 255, 255, 0.01);
+        border-top: 1px dashed rgba(255, 255, 255, 0.08);
+        padding-top: 12px;
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      /* Status Feedback */
+      .status-banner {
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-top: 8px;
+        display: none;
+        font-weight: 500;
+      }
+
+      .status-info {
+        background: rgba(139, 92, 246, 0.08);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        color: #a78bfa;
+        display: block;
+      }
+
+      .status-err {
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+        display: block;
+      }
+
+      .status-success {
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        color: #6ee7b7;
+        display: block;
+      }
+
+      /* Quick list display styling */
+      .list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .list-item {
+        background: rgba(255, 255, 255, 0.015);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        padding: 16px;
+        border-radius: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+      }
+
+      .list-item:hover {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.08);
+      }
+
+      .list-item-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .list-item-title {
+        font-weight: 600;
+        font-size: 15px;
+      }
+
+      .list-item-meta {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .list-item-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      /* Swapper Specific UI */
+      .swap-box {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        position: relative;
+      }
+
+      .swap-divider {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: -10px 0;
+        z-index: 10;
+      }
+
+      .swap-circle-btn {
+        width: 36px;
+        height: 36px;
+        background: #0f172a;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--primary);
+        font-weight: bold;
+        transition: all 0.3s ease;
+      }
+
+      .swap-circle-btn:hover {
+        border-color: var(--primary);
+        box-shadow: 0 0 10px var(--primary-glow);
+        transform: rotate(180deg);
+      }
+
+      /* Admin section panels grid */
+      .admin-controls-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+      }
+
+      /* Footer */
+      footer {
+        margin-top: 40px;
+        text-align: center;
+        font-size: 12px;
+        color: var(--text-muted);
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        padding-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- HEADER -->
+      <header>
+        <div class="brand">
+          <div class="brand-logo">N</div>
+          <div>
+            <h1>DefiNexus</h1>
+            <span style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Premium Multiverse Hub</span>
+          </div>
+        </div>
+        <div class="wallet-panel">
+          <div class="balances">
+            <div class="balance-item">
+              ETH: <span id="ethBalance">0.000</span>
+            </div>
+            <div class="balance-item">
+              DEX: <span id="dexBalance">0.000</span>
+            </div>
+          </div>
+          <button id="connectBtn" class="btn">Connect Wallet</button>
+          <span id="account" style="font-size: 14px; font-weight: 600; color: var(--primary);">Not connected</span>
+        </div>
+      </header>
+
+      <!-- NAVIGATION TABS -->
+      <nav class="nav-tabs">
+        <button class="tab-btn active" data-tab="nft-market">🖼️ NFT Marketplace</button>
+        <button class="tab-btn" data-tab="dex-swap">💱 DEX Swap</button>
+        <button class="tab-btn" data-tab="portfolio">💼 My Portfolio</button>
+        <button class="tab-btn" data-tab="loans">🏦 Loans Portal</button>
+        <button id="adminTabBtn" class="tab-btn hidden" data-tab="admin">🛡️ Admin Panel</button>
+      </nav>
+
+      <!-- MAIN TABS CONTAINER -->
+      <main>
+        <!-- TAB 1: NFT MARKETPLACE -->
+        <section id="nft-market" class="tab-panel">
+          <div class="grid-3" style="grid-template-columns: 280px 1fr 1fr; gap: 24px;">
+            <!-- Mint Card -->
+            <div class="card glow-primary" style="height: fit-content;">
+              <div class="card-title">Mint Nexus NFT</div>
+              <div class="form-group">
+                <label>Mint Price</label>
+                <div class="input-wrapper">
+                  <input id="mintPriceDisplay" type="text" readonly value="0.01 ETH" />
+                  <span class="input-suffix">ETH</span>
+                </div>
+              </div>
+              <button id="mintBtn" class="btn" style="width: 100%;">Mint Token</button>
+              <div id="mintStatus" class="status-banner"></div>
+            </div>
+
+            <!-- Active Marketplace Listings -->
+            <div class="card" style="grid-column: span 2;">
+              <div class="card-title">Market Listings</div>
+              <div id="marketListingsGrid" class="grid-dynamic">
+                <!-- Loaded dynamically -->
+                <div class="muted" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
+                  No active listings found. Mint or list an NFT to see it here!
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Auctions -->
+          <div class="card" style="margin-top: 24px;">
+            <div class="card-title">Live Auctions</div>
+            <div id="auctionsGrid" class="grid-dynamic">
+              <!-- Loaded dynamically -->
+              <div class="muted" style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
+                No active auctions found. Set up an auction in your portfolio to start one!
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: DEX SWAP (VIA MARKETPLACE) -->
+        <section id="dex-swap" class="tab-panel hidden">
+          <div class="grid-2">
+            <!-- Swap Card -->
+            <div class="card glow-primary">
+              <div class="card-title">
+                <span>DEX Swapper</span>
+                <span id="ratePreview" style="font-size: 12px; color: var(--text-muted);">Rate: 1 ETH = 1000 DEX</span>
+              </div>
+              <div class="swap-box">
+                <!-- Source Input -->
+                <div class="form-group" style="margin: 0;">
+                  <label id="swapFromLabel">Pay</label>
+                  <div class="input-wrapper">
+                    <input id="swapInputAmount" type="number" step="any" placeholder="0.0" />
+                    <span id="swapInputSuffix" class="input-suffix">ETH</span>
+                  </div>
+                </div>
+
+                <!-- Toggle Swap Direction -->
+                <div class="swap-divider">
+                  <button id="toggleSwapDirBtn" class="swap-circle-btn">↕</button>
+                </div>
+
+                <!-- Destination Output -->
+                <div class="form-group" style="margin: 0;">
+                  <label id="swapToLabel">Receive (Estimate)</label>
+                  <div class="input-wrapper">
+                    <input id="swapOutputAmount" type="number" readonly placeholder="0.0" />
+                    <span id="swapOutputSuffix" class="input-suffix">DEX</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Swap Trigger -->
+              <button id="executeSwapBtn" class="btn" style="width: 100%; margin-top: 24px;">Execute Swap</button>
+              <div id="swapStatus" class="status-banner"></div>
+            </div>
+
+            <!-- Liquidity Info Card -->
+            <div class="card">
+              <div class="card-title">DEX Contract Details</div>
+              <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div class="balance-item" style="justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01);">
+                  DEX Contract Swap Rate: <span id="contractRateDisplay">1000 DEX / ETH</span>
+                </div>
+                <div class="balance-item" style="justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01);">
+                  Marketplace DEX Reserves: <span id="marketplaceDexReserves">0.0 DEX</span>
+                </div>
+                <div class="balance-item" style="justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01);">
+                  Marketplace ETH Reserves: <span id="marketplaceEthReserves">0.0 ETH</span>
+                </div>
+                <!-- Approve DEX for Marketplace Button -->
+                <div style="margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.05); padding-top: 16px;">
+                  <label>Marketplace DEX Allowance (needed to sell DEX)</label>
+                  <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+                    <span id="marketplaceAllowanceDisplay" style="font-weight: 600; font-size: 14px; color:#fff;">0.0 DEX</span>
+                    <button id="approveDexMarketBtn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Approve Max</button>
+                  </div>
+                  <div id="approveDexMarketStatus" class="status-banner"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: MY PORTFOLIO -->
+        <section id="portfolio" class="tab-panel hidden">
+          <!-- Portfolio Stats Header -->
+          <div class="card" style="margin-bottom: 24px; padding: 20px 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h3 style="font-size: 18px; font-weight: 700; color: #fff;">My Assets Inventory</h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">Manage, list, auction, collateralize or incinerate your tokens.</p>
+              </div>
+              <!-- Approval status globally for convenience -->
+              <div style="display: flex; gap: 14px; font-size: 13px;">
+                <div class="balance-item" style="align-items: center;">
+                  Marketplace NFT Approved: <span id="nftMarketApprovedDisplay">Checking...</span>
+                  <button id="approveNftMarketBtn" class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; margin-left: 8px;">Approve</button>
+                </div>
+                <div class="balance-item" style="align-items: center;">
+                  Loans NFT Approved: <span id="nftLoansApprovedDisplay">Checking...</span>
+                  <button id="approveNftLoansBtn" class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; margin-left: 8px;">Approve</button>
+                </div>
+              </div>
+            </div>
+            <div id="portfolioApprovalStatus" class="status-banner" style="margin-top: 10px;"></div>
+          </div>
+
+          <!-- My NFTs Grid -->
+          <div id="myNftsGrid" class="grid-dynamic">
+            <!-- Loaded dynamically -->
+            <div class="muted" style="grid-column: 1/-1; text-align: center; padding: 80px; color: var(--text-muted);">
+              You don't own any Nexus NFTs yet. Go to the **NFT Marketplace** tab to mint your first one!
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: LOANS PORTAL -->
+        <section id="loans" class="tab-panel hidden">
+          <div class="grid-2">
+            <!-- DEX Loans (Collateralize DEX to get ETH) -->
+            <div class="card">
+              <div class="card-title">DEX Collateral Loans (Borrow ETH)</div>
+              <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 18px;">
+                Lock your DEX tokens as collateral and borrow ETH instantly. Borrow value is **50%** of the DEX collateral value.
+              </p>
+              
+              <div class="form-group">
+                <label>Collateral DEX Amount</label>
+                <div class="input-wrapper">
+                  <input id="dexLoanCollateralAmount" type="number" placeholder="500" />
+                  <span class="input-suffix">DEX</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Loan Duration (Cycles)</label>
+                <div class="input-wrapper">
+                  <input id="dexLoanDurationCycles" type="number" placeholder="6" min="1" max="12" />
+                  <span class="input-suffix">Cycles</span>
+                </div>
+                <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block;">
+                  Max Loan duration allowed by system: <span id="maxLoanCyclesDisplay">12</span> cycles.
+                </span>
+              </div>
+              <div class="form-group">
+                <label>DEX Allowance for Loans Contract</label>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                  <span id="loanManagerDEXAllowance" style="font-weight:600; color:#fff;">0.0 DEX</span>
+                  <button id="approveDexLoanManagerBtn" class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;">Approve DEX</button>
+                </div>
+              </div>
+
+              <button id="borrowDexBtn" class="btn btn-accent" style="width: 100%; margin-top: 8px;">Create DEX Loan</button>
+              <div id="dexLoanRequestStatus" class="status-banner"></div>
+            </div>
+
+            <!-- Active DEX Loans list -->
+            <div class="card">
+              <div class="card-title">My Active DEX Loans</div>
+              <div id="myDexLoansList" class="list-container">
+                <!-- Dynamically populated -->
+                <div class="muted" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                  You have no active DEX collateral loans.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top: 24px;">
+            <!-- NFT Loan Requests (Lending/Providing) -->
+            <div class="card">
+              <div class="card-title">Pending NFT Loan Requests</div>
+              <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 18px;">
+                Fund other users' NFT loan requests. You will receive **DEX collateral (200% of borrow value)**. If they default, you claim their collateral NFT.
+              </p>
+              <div id="nftLoanRequestsList" class="list-container">
+                <!-- Dynamically populated -->
+                <div class="muted" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                  No pending NFT loan requests found in network.
+                </div>
+              </div>
+            </div>
+
+            <!-- My Active NFT Loans -->
+            <div class="card">
+              <div class="card-title">My NFT Loans (Borrower or Lender)</div>
+              <div id="myNftLoansList" class="list-container">
+                <!-- Dynamically populated -->
+                <div class="muted" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                  You have no active NFT collateral loans.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 5: ADMIN/OWNER PANEL -->
+        <section id="admin" class="tab-panel hidden">
+          <div class="card">
+            <div class="card-title">🛡️ Protocol Owner Dashboard</div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">
+              Adjust protocol-wide risk variables, prices, rates, and limits. This panel is visible only to the protocol administrators.
+            </p>
+
+            <div class="admin-controls-grid">
+              <!-- DEX Admin -->
+              <div class="card" style="background: rgba(255,255,255,0.015); border-color: rgba(255, 255, 255, 0.04);">
+                <div class="card-title" style="font-size: 15px;">DEX Swap Rate</div>
+                <div class="form-group">
+                  <label>Current Swap Rate</label>
+                  <span id="currentAdminSwapRate" style="font-weight: 700; color: #fff;">Checking...</span>
+                </div>
+                <div class="form-group">
+                  <label>New Swap Rate (tokens/ETH)</label>
+                  <input id="adminSwapRateInput" type="number" placeholder="1000" />
+                </div>
+                <button id="adminSetSwapRateBtn" class="btn" style="width: 100%;">Update Swap Rate</button>
+                <div id="adminSwapRateStatus" class="status-banner"></div>
+              </div>
+
+              <!-- NFT Admin -->
+              <div class="card" style="background: rgba(255,255,255,0.015); border-color: rgba(255, 255, 255, 0.04);">
+                <div class="card-title" style="font-size: 15px;">NFT Mint & URI</div>
+                <div class="form-group">
+                  <label>NFT Mint Price (ETH)</label>
+                  <div style="display: flex; gap: 8px;">
+                    <input id="adminMintPriceInput" type="number" step="any" placeholder="0.01" />
+                    <button id="adminSetMintPriceBtn" class="btn" style="padding: 6px 12px;">Save</button>
+                  </div>
+                </div>
+                <div class="form-group" style="margin-top: 14px;">
+                  <label>Base Token URI</label>
+                  <div style="display: flex; gap: 8px;">
+                    <input id="adminBaseUriInput" type="text" placeholder="ipfs://..." />
+                    <button id="adminSetBaseUriBtn" class="btn" style="padding: 6px 12px;">Save</button>
+                  </div>
+                </div>
+                <div id="adminNftStatus" class="status-banner"></div>
+              </div>
+
+              <!-- Loans Admin -->
+              <div class="card" style="background: rgba(255,255,255,0.015); border-color: rgba(255, 255, 255, 0.04); grid-column: span 2;">
+                <div class="card-title" style="font-size: 15px;">Loan Parameters</div>
+                <div class="grid-2" style="margin-bottom: 0;">
+                  <div class="form-group">
+                    <label>Payment Cycle Duration (Seconds)</label>
+                    <input id="adminPaymentCycleInput" type="number" placeholder="60" />
+                  </div>
+                  <div class="form-group">
+                    <label>Interest Rate (%)</label>
+                    <input id="adminInterestInput" type="number" placeholder="10" />
+                  </div>
+                  <div class="form-group">
+                    <label>Termination Fee (ETH)</label>
+                    <input id="adminTerminationFeeInput" type="number" step="any" placeholder="0.01" />
+                  </div>
+                  <div class="form-group">
+                    <label>Max Loan Duration (Cycles)</label>
+                    <input id="adminMaxDurationInput" type="number" placeholder="12" />
+                  </div>
+                </div>
+                <button id="adminSaveLoanParamsBtn" class="btn btn-accent" style="width: 100%; margin-top: 10px;">Update All Loan Parameters</button>
+                <div id="adminLoansStatus" class="status-banner"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- FOOTER -->
+      <footer>
+        DefiNexus DApp Portal v3.0 — Powered by Ethers.js v6 & MetaMask. High Fidelity Smart Contract Suite.
+      </footer>
+    </div>
+
+    <!-- MAIN APP SCRIPT -->
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

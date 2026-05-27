@@ -6,7 +6,7 @@
     "target": "es2023",
     "skipLibCheck": true,
     "outDir": "dist",
-    "types": ["node"]
+    "types": ["node", "hardhat", "@nomicfoundation/hardhat-ethers"]
   },
 
    "include": [

@@ -1,9 +1,8 @@
-import { defineConfig } from "hardhat/config";
-import hardhatEthers from "@nomicfoundation/hardhat-ethers";
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-ethers";
 
-export default defineConfig({
-  solidity: {
-    version: "0.8.28",
-  },
-  plugins: [hardhatEthers],
-});
+const config: HardhatUserConfig = {
+  solidity: "0.8.28",
+};
+
+export default config;
