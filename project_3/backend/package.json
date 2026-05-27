@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "ethers": "^6.16.0",
     "express": "^5.2.1",
     "pg": "^8.21.0"
   },

@@ -1,58 +1,37 @@
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS nfts;
-DROP TABLE IF EXISTS sales;
-DROP TABLE IF EXISTS auctions;
-DROP TABLE IF EXISTS loans;
+DROP TABLE IF EXISTS sales CASCADE;
+DROP TABLE IF EXISTS auctions CASCADE;
+DROP TABLE IF EXISTS NFTloans CASCADE;
+DROP TABLE IF EXISTS DEXloans CASCADE;
+DROP TYPE IF EXISTS currency;
 
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    address VARCHAR(42) UNIQUE NOT NULL,
-    username VARCHAR(255) UNIQUE NOT NULL
-);
-
-CREATE TABLE nfts (
-    id INTEGER UNIQUE NOT NULL PRIMARY KEY,
-    uri TEXT NOT NULL,
-    owner_id INTEGER REFERENCES users(id)
-);
+CREATE TYPE currency AS ENUM ('DEX','ETH');
 
 CREATE TABLE sales (
     id SERIAL PRIMARY KEY,
-    nft_id INTEGER REFERENCES nfts(id),
-    seller_id INTEGER REFERENCES users(id),
+    nft_id INTEGER,
+    buyer_address VARCHAR(256),
     price NUMERIC(20, 0) NOT NULL,
-    active BOOLEAN DEFAULT TRUE
+    cur currency NOT NULL
 );
 
 CREATE TABLE auctions (
     id SERIAL PRIMARY KEY,
-    nft_id INTEGER REFERENCES nfts(id),
-    seller_id INTEGER REFERENCES users(id),
-    minimum_price NUMERIC(20, 0) NOT NULL,
-    end_time TIMESTAMP NOT NULL,
-    highest_bidder_id INTEGER REFERENCES users(id),
-    highest_bid NUMERIC(20, 0) DEFAULT 0,
-    active BOOLEAN DEFAULT TRUE
+    nft_id INTEGER,
+    seller_address VARCHAR(256),
+    buyer_address VARCHAR(256),
+    price NUMERIC(20, 0) DEFAULT 0
 );
 
 CREATE TABLE DEXloans (
     id SERIAL PRIMARY KEY,
-    borrower_id INTEGER REFERENCES users(id),
-    loan_amount NUMERIC(20, 0) NOT NULL,
-    interest_rate NUMERIC(10, 5) NOT NULL,
-    duration INTEGER NOT NULL,
-    start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP NOT NULL
+    borrower_address VARCHAR(256),
+    amount NUMERIC(20, 0) NOT NULL
 );
 
 CREATE TABLE NFTLoans (
     id SERIAL PRIMARY KEY,
-    nft_id INTEGER REFERENCES nfts(id),
-    borrower_id INTEGER REFERENCES users(id),
-    provider_id INTEGER REFERENCES users(id),
-    amount NUMERIC(20, 0) NOT NULL,
-    interest_rate NUMERIC(10, 5) NOT NULL,
-    duration INTEGER NOT NULL,
-    start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP NOT NULL
+    nft_id INTEGER,
+    borrower_id VARCHAR(256),
+    provider_id VARCHAR(256),
+    amount NUMERIC(20, 0) NOT NULL
 );

@@ -1,7 +1,11 @@
 // src/server.ts
 
+import fs from 'fs';
+import path from 'path';
 import express, { Request, Response } from 'express';
+import { ethers } from 'ethers';
 import { Pool } from 'pg';
+import { LOAN_MANAGER_ABI, MARKETPLACE_ABI } from './abis';
 
 const app = express();
 
@@ -12,60 +16,69 @@ const pool = new Pool({
     process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/postgres',
 });
 
-interface UserRecord {
-  id: number;
-  address: string;
-  username: string;
-}
-
-interface NftRecord {
-  id: number;
-  uri: string;
-  owner_id: number | null;
-}
-
 interface SaleRecord {
   id: number;
   nft_id: number | null;
-  seller_id: number | null;
+  buyer_address: string | null;
   price: string;
-  active: boolean;
+  cur: 'DEX' | 'ETH';
 }
 
 interface AuctionRecord {
   id: number;
   nft_id: number | null;
-  seller_id: number | null;
-  minimum_price: string;
-  end_time: string;
-  highest_bidder_id: number | null;
-  highest_bid: string;
-  active: boolean;
+  seller_address: string | null;
+  buyer_address: string | null;
+  price: string;
 }
 
 interface DexLoanRecord {
   id: number;
-  borrower_id: number | null;
-  loan_amount: string;
-  interest_rate: string;
-  duration: number;
-  start_time: string;
-  end_time: string;
+  borrower_address: string | null;
+  amount: string;
 }
 
 interface NftLoanRecord {
   id: number;
   nft_id: number | null;
-  borrower_id: number | null;
-  provider_id: number | null;
+  borrower_id: string | null;
+  provider_id: string | null;
   amount: string;
-  interest_rate: string;
-  duration: number;
-  start_time: string;
-  end_time: string;
 }
 
-const allowedTables = new Set(['users', 'nfts', 'sales', 'auctions', 'dexloans', 'nftloans']);
+const allowedTables = new Set(['sales', 'auctions', 'dexloans', 'nftloans']);
+
+const RPC_URL = process.env.RPC_URL || 'http://127.0.0.1:8545';
+
+function getContractAddresses(): { MARKETPLACE: string; LOAN_MANAGER: string } {
+  const envMarketplace = process.env.MARKETPLACE_ADDRESS;
+  const envLoanManager = process.env.LOAN_MANAGER_ADDRESS;
+
+  if (envMarketplace && envLoanManager) {
+    return { MARKETPLACE: envMarketplace, LOAN_MANAGER: envLoanManager };
+  }
+
+  const configPath = path.resolve(__dirname, '../../frontend/src/config.ts');
+
+  if (fs.existsSync(configPath)) {
+    const content = fs.readFileSync(configPath, 'utf8');
+    const marketplaceMatch = content.match(/MARKETPLACE:\s*"([^"]+)"/);
+    const loanManagerMatch = content.match(/LOAN_MANAGER:\s*"([^"]+)"/);
+
+    if (marketplaceMatch?.[1] && loanManagerMatch?.[1]) {
+      return {
+        MARKETPLACE: marketplaceMatch[1],
+        LOAN_MANAGER: loanManagerMatch[1],
+      };
+    }
+  }
+
+  throw new Error('Contract addresses not found. Set MARKETPLACE_ADDRESS and LOAN_MANAGER_ADDRESS or run the deployment script to update frontend/src/config.ts.');
+}
+
+function getParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] : value ?? '';
+}
 
 function normalizeTableName(table: string): string {
   const value = table.toLowerCase();
@@ -148,36 +161,151 @@ async function deleteOne(table: string, id: number): Promise<unknown> {
   return result.rows[0];
 }
 
+async function handleItemSold(buyer: string, tokenId: bigint, price: bigint): Promise<void> {
+  await pool.query(
+    'INSERT INTO sales (nft_id, buyer_address, price, cur) VALUES ($1, $2, $3, $4)',
+    [Number(tokenId), buyer, price.toString(), 'DEX'],
+  );
+}
+
+async function handleAuctionEnded(seller: string, buyer: string, tokenId: bigint, finalPrice: bigint): Promise<void> {
+  await pool.query(
+    'INSERT INTO auctions (nft_id, seller_address, buyer_address, price) VALUES ($1, $2, $3, $4)',
+    [Number(tokenId), seller, buyer, finalPrice.toString()],
+  );
+}
+
+async function handleDexLoanFinished(borrower: string, amount: bigint): Promise<void> {
+  await pool.query(
+    'INSERT INTO dexloans (borrower_address, amount) VALUES ($1, $2)',
+    [borrower, amount.toString()],
+  );
+}
+
+async function handleNftLoanFinished(borrower: string, provider: string, amount: bigint): Promise<void> {
+  await pool.query(
+    'INSERT INTO nftloans (nft_id, borrower_id, provider_id, amount) VALUES ($1, $2, $3, $4)',
+    [0, borrower, provider, amount.toString()],
+  );
+}
+
+function startEventListeners(): void {
+  const addresses = getContractAddresses();
+  const provider = new ethers.JsonRpcProvider(RPC_URL);
+
+  const marketplace = new ethers.Contract(addresses.MARKETPLACE, MARKETPLACE_ABI, provider);
+  const loanManager = new ethers.Contract(addresses.LOAN_MANAGER, LOAN_MANAGER_ABI, provider);
+
+  marketplace.on('ItemSold', (buyer: string, tokenId: bigint, price: bigint) => {
+    void handleItemSold(buyer, tokenId, price);
+  });
+
+  marketplace.on('AuctionEnded', (seller: string, buyer: string, tokenId: bigint, finalPrice: bigint) => {
+    void handleAuctionEnded(seller, buyer, tokenId, finalPrice);
+  });
+
+  loanManager.on('DEXloanFinished', (borrower: string, amount: bigint) => {
+    void handleDexLoanFinished(borrower, amount);
+  });
+
+  loanManager.on('NFTloanFinished', (borrower: string, provider: string, amount: bigint) => {
+    void handleNftLoanFinished(borrower, provider, amount);
+  });
+
+  console.log('Listening for contract completion events at:', addresses);
+}
+
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ ok: true, message: 'Backend is up' });
 });
 
-app.get('/api/users', async (_req: Request, res: Response) => {
+app.get('/api/sales/by-buyer/:buyer_address', async (req: Request, res: Response) => {
   try {
-    const users = await readAll('users');
-    res.json(users as UserRecord[]);
+    const buyerAddress = getParam(req.params.buyer_address);
+    const result = await pool.query(
+      'SELECT * FROM sales WHERE buyer_address = $1 ORDER BY id',
+      [buyerAddress],
+    );
+
+    res.json(result.rows as SaleRecord[]);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch users', error: (error as Error).message });
+    res.status(500).json({ message: 'Failed to fetch sales', error: (error as Error).message });
   }
 });
 
-app.get('/api/users/:id', async (req: Request, res: Response) => {
+app.get('/api/auctions/by-buyer/:buyer_address', async (req: Request, res: Response) => {
   try {
-    const user = await readOne('users', Number(req.params.id));
-    res.json(user as UserRecord);
-  } catch (error) {
-    if ((error as Error).message === 'Not found') {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
+    const buyerAddress = getParam(req.params.buyer_address);
+    const result = await pool.query(
+      'SELECT * FROM auctions WHERE buyer_address = $1 ORDER BY id',
+      [buyerAddress],
+    );
 
-    res.status(500).json({ message: 'Failed to fetch user', error: (error as Error).message });
+    res.json(result.rows as AuctionRecord[]);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch auctions', error: (error as Error).message });
+  }
+});
+
+app.get('/api/auctions/by-seller/:seller_address', async (req: Request, res: Response) => {
+  try {
+    const sellerAddress = getParam(req.params.seller_address);
+    const result = await pool.query(
+      'SELECT * FROM auctions WHERE seller_address = $1 ORDER BY id',
+      [sellerAddress],
+    );
+
+    res.json(result.rows as AuctionRecord[]);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch auctions', error: (error as Error).message });
+  }
+});
+
+app.get('/api/dexloans/borrower/:borrower_address', async (req: Request, res: Response) => {
+  try {
+    const borrowerAddress = getParam(req.params.borrower_address);
+    const result = await pool.query(
+      'SELECT * FROM dexloans WHERE borrower_address = $1 ORDER BY id',
+      [borrowerAddress],
+    );
+
+    res.json(result.rows as DexLoanRecord[]);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch DEX loans', error: (error as Error).message });
+  }
+});
+
+app.get('/api/nftloans/borrower/:borrower_id', async (req: Request, res: Response) => {
+  try {
+    const borrowerId = getParam(req.params.borrower_id);
+    const result = await pool.query(
+      'SELECT * FROM nftloans WHERE borrower_id = $1 ORDER BY id',
+      [borrowerId],
+    );
+
+    res.json(result.rows as NftLoanRecord[]);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch NFT loans', error: (error as Error).message });
+  }
+});
+
+app.get('/api/nftloans/provider/:provider_id', async (req: Request, res: Response) => {
+  try {
+    const providerId = getParam(req.params.provider_id);
+    const result = await pool.query(
+      'SELECT * FROM nftloans WHERE provider_id = $1 ORDER BY id',
+      [providerId],
+    );
+
+    res.json(result.rows as NftLoanRecord[]);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch NFT loans', error: (error as Error).message });
   }
 });
 
 app.get('/api/:table', async (req: Request, res: Response) => {
   try {
-    const table = Array.isArray(req.params.table) ? req.params.table[0] : req.params.table;
+    const table = getParam(req.params.table);
     const rows = await readAll(table);
     res.json(rows);
   } catch (error) {
@@ -187,7 +315,7 @@ app.get('/api/:table', async (req: Request, res: Response) => {
 
 app.get('/api/:table/:id', async (req: Request, res: Response) => {
   try {
-    const table = Array.isArray(req.params.table) ? req.params.table[0] : req.params.table;
+    const table = getParam(req.params.table);
     const row = await readOne(table, Number(req.params.id));
     res.json(row);
   } catch (error) {
@@ -202,7 +330,7 @@ app.get('/api/:table/:id', async (req: Request, res: Response) => {
 
 app.post('/api/:table', async (req: Request, res: Response) => {
   try {
-    const table = Array.isArray(req.params.table) ? req.params.table[0] : req.params.table;
+    const table = getParam(req.params.table);
     if (!isRecord(req.body)) {
       res.status(400).json({ message: 'JSON object required' });
       return;
@@ -217,7 +345,7 @@ app.post('/api/:table', async (req: Request, res: Response) => {
 
 app.put('/api/:table/:id', async (req: Request, res: Response) => {
   try {
-    const table = Array.isArray(req.params.table) ? req.params.table[0] : req.params.table;
+    const table = getParam(req.params.table);
     if (!isRecord(req.body)) {
       res.status(400).json({ message: 'JSON object required' });
       return;
@@ -237,7 +365,7 @@ app.put('/api/:table/:id', async (req: Request, res: Response) => {
 
 app.delete('/api/:table/:id', async (req: Request, res: Response) => {
   try {
-    const table = Array.isArray(req.params.table) ? req.params.table[0] : req.params.table;
+    const table = getParam(req.params.table);
     const row = await deleteOne(table, Number(req.params.id));
     res.json({ message: 'Record deleted', row });
   } catch (error) {
@@ -254,4 +382,5 @@ const PORT = Number(process.env.PORT || 3000);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startEventListeners();
 });
