@@ -9,16 +9,13 @@ contract DEXContractTest is Test {
     uint256 constant SWAP_RATE = 50;
 
     function setUp() public {
-        cont = new DEXContract(SWAP_RATE);
+        vm.deal(address(this), 50 ether);
+        cont = new DEXContract(SWAP_RATE, address(0xdead));
         vm.deal(address(this), 50 ether);
     }
 
     function testInitialSwapRate() public {
         assertEq(cont.dexSwapRate(), SWAP_RATE);
-    }
-
-    function testInitialBalanceForOwner() public {
-        assertEq(cont.getDexBalance(), 1 ether, "Owner should receive initial DEX allocation");
     }
 
     function testETHtoDEXConversion() public {

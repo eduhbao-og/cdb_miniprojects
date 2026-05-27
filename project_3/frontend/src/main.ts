@@ -6,7 +6,8 @@ import {
   getNFTContract,
   getDEXContract,
   getMarketplaceContract,
-  getLoanManagerContract
+  getLoanManagerContract,
+  getBankContract
 } from './wallet';
 import { ethers } from 'ethers';
 
@@ -29,8 +30,8 @@ const swapInputAmount = document.getElementById('swapInputAmount') as HTMLInputE
 const swapInputSuffix = document.getElementById('swapInputSuffix') as HTMLSpanElement;
 const swapOutputAmount = document.getElementById('swapOutputAmount') as HTMLInputElement;
 const swapOutputSuffix = document.getElementById('swapOutputSuffix') as HTMLSpanElement;
-const swapFromLabel = document.getElementById('swapFromLabel') as HTMLLabelFieldElement;
-const swapToLabel = document.getElementById('swapToLabel') as HTMLLabelFieldElement;
+const swapFromLabel = document.getElementById('swapFromLabel') as HTMLLabelElement;
+const swapToLabel = document.getElementById('swapToLabel') as HTMLLabelElement;
 const toggleSwapDirBtn = document.getElementById('toggleSwapDirBtn') as HTMLButtonElement;
 const executeSwapBtn = document.getElementById('executeSwapBtn') as HTMLButtonElement;
 const swapStatus = document.getElementById('swapStatus') as HTMLDivElement;
@@ -82,6 +83,15 @@ const adminTerminationFeeInput = document.getElementById('adminTerminationFeeInp
 const adminMaxDurationInput = document.getElementById('adminMaxDurationInput') as HTMLInputElement;
 const adminSaveLoanParamsBtn = document.getElementById('adminSaveLoanParamsBtn') as HTMLButtonElement;
 const adminLoansStatus = document.getElementById('adminLoansStatus') as HTMLDivElement;
+
+// Bank Admin elements
+const adminBankEthBalance = document.getElementById('adminBankEthBalance') as HTMLSpanElement;
+const adminBankDexBalance = document.getElementById('adminBankDexBalance') as HTMLSpanElement;
+const adminModuleAddressInput = document.getElementById('adminModuleAddressInput') as HTMLInputElement;
+const adminEnableModuleBtn = document.getElementById('adminEnableModuleBtn') as HTMLButtonElement;
+const adminDisableModuleBtn = document.getElementById('adminDisableModuleBtn') as HTMLButtonElement;
+const adminModuleAuthStatus = document.getElementById('adminModuleAuthStatus') as HTMLSpanElement;
+const adminBankStatus = document.getElementById('adminBankStatus') as HTMLDivElement;
 
 // Global App State
 let activeAccount: string | null = null;
@@ -137,16 +147,20 @@ async function refreshData() {
     // 2. Fetch Swap Rate Info
     const rate = await dex.dexSwapRate();
     cachedSwapRate = BigInt(rate);
-    ratePreview.textContent = `Rate: 1 ETH = ${rate.toString()} DEX`;
-    contractRateDisplay.textContent = `${rate.toString()} DEX / ETH`;
-    currentAdminSwapRate.textContent = `${rate.toString()} DEX / ETH`;
+    const rateDisplay = parseFloat(ethers.formatEther(rate)).toString();
+    ratePreview.textContent = `Rate: 1 ETH = ${rateDisplay} DEX`;
+    contractRateDisplay.textContent = `${rateDisplay} DEX / ETH`;
+    currentAdminSwapRate.textContent = `${rateDisplay} DEX / ETH`;
 
-    // 3. Fetch Marketplace reserves
-    const mDexRes = await dex.balanceOf(CONTRACT_ADDRESSES.MARKETPLACE);
-    marketplaceDexReserves.textContent = `${parseFloat(ethers.formatEther(mDexRes)).toFixed(2)} DEX`;
+    // 3. Fetch Bank reserves (central vault)
+    const bank = await getBankContract();
+    if (bank) {
+      const bDexRes = await bank.getTokenBalance();
+      marketplaceDexReserves.textContent = `${parseFloat(ethers.formatEther(bDexRes)).toFixed(2)} DEX`;
 
-    const mEthRes = await provider.getBalance(CONTRACT_ADDRESSES.MARKETPLACE);
-    marketplaceEthReserves.textContent = `${parseFloat(ethers.formatEther(mEthRes)).toFixed(4)} ETH`;
+      const bEthRes = await bank.getBalance();
+      marketplaceEthReserves.textContent = `${parseFloat(ethers.formatEther(bEthRes)).toFixed(4)} ETH`;
+    }
 
     // 4. Fetch Allowances
     const mAllowance = await dex.allowance(activeAccount, CONTRACT_ADDRESSES.MARKETPLACE);
@@ -176,11 +190,13 @@ async function refreshData() {
     const nftOwner = await nft.owner();
     const dexOwner = await dex.owner();
     const lmOwner = await loanManager.owner();
+    const bankOwner = bank ? await bank.owner() : null;
 
     const isAdmin = 
       activeAccount.toLowerCase() === nftOwner.toLowerCase() ||
       activeAccount.toLowerCase() === dexOwner.toLowerCase() ||
-      activeAccount.toLowerCase() === lmOwner.toLowerCase();
+      activeAccount.toLowerCase() === lmOwner.toLowerCase() ||
+      (bankOwner !== null && activeAccount.toLowerCase() === bankOwner.toLowerCase());
 
     if (isAdmin) {
       adminTabBtn.classList.remove('hidden');
@@ -198,6 +214,14 @@ async function refreshData() {
       adminTerminationFeeInput.placeholder = ethers.formatEther(term);
       
       adminMaxDurationInput.placeholder = maxDur.toString();
+
+      // Load Bank balances
+      if (bank) {
+        const bEth = await bank.getBalance();
+        adminBankEthBalance.textContent = `${parseFloat(ethers.formatEther(bEth)).toFixed(4)} ETH`;
+        const bDex = await bank.getTokenBalance();
+        adminBankDexBalance.textContent = `${parseFloat(ethers.formatEther(bDex)).toFixed(2)} DEX`;
+      }
     } else {
       adminTabBtn.classList.add('hidden');
     }
@@ -965,12 +989,19 @@ swapInputAmount.addEventListener('input', () => {
   }
   
   const parsedVal = parseFloat(val);
-  const rate = Number(cachedSwapRate);
+  const rawRate = cachedSwapRate;
+  const oneEther = BigInt(ethers.parseEther("1"));
   
   if (swapDirection === 'ETH_TO_DEX') {
-    swapOutputAmount.value = (parsedVal * rate).toString();
+    // ETHtoDEX formula: (ethAmount * dexSwapRate) / 1 ether
+    const ethWei = ethers.parseEther(parsedVal.toString() || "0");
+    const dexRaw = (ethWei * rawRate) / oneEther;
+    swapOutputAmount.value = ethers.formatEther(dexRaw);
   } else {
-    swapOutputAmount.value = (parsedVal / rate).toString();
+    // DEXtoETH formula: (dexAmount * 1 ether) / dexSwapRate
+    const dexRaw = ethers.parseEther(parsedVal.toString() || "0");
+    const ethWei = (dexRaw * oneEther) / rawRate;
+    swapOutputAmount.value = ethers.formatEther(ethWei);
   }
 });
 
@@ -1267,6 +1298,75 @@ adminSaveLoanParamsBtn.addEventListener('click', async () => {
   }
 });
 
+
+// Enable Module on Bank
+adminEnableModuleBtn.addEventListener('click', async () => {
+  try {
+    const moduleAddr = adminModuleAddressInput.value.trim();
+    if (!moduleAddr || !/^0x[a-fA-F0-9]{40}$/.test(moduleAddr)) return alert("Enter a valid address");
+
+    const bank = await getBankContract();
+    if (!bank) return;
+
+    adminEnableModuleBtn.disabled = true;
+    showBanner(adminBankStatus, "Enabling module on Bank...", "info");
+
+    const tx = await bank.setAuthorizedModule(moduleAddr, true);
+    await tx.wait();
+
+    showBanner(adminBankStatus, "Module enabled successfully!", "success");
+    adminModuleAddressInput.value = '';
+    setTimeout(refreshData, 2000);
+  } catch (err: any) {
+    console.error(err);
+    adminEnableModuleBtn.disabled = false;
+    showBanner(adminBankStatus, err.message || "Failed to enable module", "err");
+  }
+});
+
+// Disable Module on Bank
+adminDisableModuleBtn.addEventListener('click', async () => {
+  try {
+    const moduleAddr = adminModuleAddressInput.value.trim();
+    if (!moduleAddr || !/^0x[a-fA-F0-9]{40}$/.test(moduleAddr)) return alert("Enter a valid address");
+
+    const bank = await getBankContract();
+    if (!bank) return;
+
+    adminDisableModuleBtn.disabled = true;
+    showBanner(adminBankStatus, "Disabling module on Bank...", "info");
+
+    const tx = await bank.setAuthorizedModule(moduleAddr, false);
+    await tx.wait();
+
+    showBanner(adminBankStatus, "Module disabled successfully!", "success");
+    adminModuleAddressInput.value = '';
+    setTimeout(refreshData, 2000);
+  } catch (err: any) {
+    console.error(err);
+    adminDisableModuleBtn.disabled = false;
+    showBanner(adminBankStatus, err.message || "Failed to disable module", "err");
+  }
+});
+
+// Check Module Authorization Status on input
+adminModuleAddressInput.addEventListener('input', async () => {
+  const moduleAddr = adminModuleAddressInput.value.trim();
+  if (!moduleAddr || !/^0x[a-fA-F0-9]{40}$/.test(moduleAddr)) {
+    adminModuleAuthStatus.textContent = 'Enter a valid address to check authorization status.';
+    return;
+  }
+  try {
+    const bank = await getBankContract();
+    if (!bank) return;
+    const isAuth = await bank.authorizedModules(moduleAddr);
+    adminModuleAuthStatus.innerHTML = isAuth
+      ? `<span style="color:var(--success);">✅ Authorized</span>`
+      : `<span style="color:var(--danger);">❌ Not Authorized</span>`;
+  } catch {
+    adminModuleAuthStatus.textContent = 'Could not check authorization.';
+  }
+});
 
 // --- INITIALIZATION ---
 

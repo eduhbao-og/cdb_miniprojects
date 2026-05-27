@@ -13,7 +13,7 @@ contract NFTContract is ERC721, Ownable {
     constructor(address bankAddress) payable ERC721("Simple NFT", "SNFT") Ownable(msg.sender) {
         mintPrice = 0.01 ether;
         require(bankAddress != address(0), "Invalid bank address");
-        bank = Bank(bankAddress);
+        bank = Bank(payable(bankAddress));
     }
 
     function mint() external payable {

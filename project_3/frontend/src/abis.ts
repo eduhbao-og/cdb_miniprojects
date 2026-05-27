@@ -57,6 +57,25 @@ export const MARKETPLACE_ABI = [
   "event AuctionEnded(address indexed seller, address indexed buyer, uint256 indexed tokenId, uint256 finalPrice)"
 ];
 
+export const BANK_ABI = [
+  "function setDexToken(address token) external",
+  "function setAuthorizedModule(address module, bool enabled) external",
+  "function authorizedModules(address module) external view returns (bool)",
+  "function getBalance() external view returns (uint256)",
+  "function getTokenBalance() external view returns (uint256)",
+  "function dexToken() external view returns (address)",
+  "function deposit() external payable",
+  "function depositToken(uint256 amount) external",
+  "function withdraw(address payable recipient, uint256 amount) external",
+  "function withdrawToken(address recipient, uint256 amount) external",
+  "function owner() external view returns (address)",
+  "event Deposited(address indexed sender, uint256 amount)",
+  "event Withdrawn(address indexed module, address indexed recipient, uint256 amount)",
+  "event TokenDeposited(address indexed sender, uint256 amount)",
+  "event TokenWithdrawn(address indexed module, address indexed recipient, uint256 amount)",
+  "event AuthorizedModuleUpdated(address indexed module, bool enabled)"
+];
+
 export const LOAN_MANAGER_ABI = [
   "function dex() external view returns (address)",
   "function nft() external view returns (address)",

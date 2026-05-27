@@ -1,7 +1,7 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Bank is Ownable, ReentrancyGuard {
@@ -13,7 +13,12 @@ contract Bank is Ownable, ReentrancyGuard {
     event TokenDeposited(address indexed sender, uint256 amount);
     event TokenWithdrawn(address indexed module, address indexed recipient, uint256 amount);
 
-    constructor(address token) Ownable() {}
+    IERC20 public dexToken;
+
+    constructor(address token) Ownable(msg.sender) {
+        require(token != address(0), "Invalid token address");
+        dexToken = IERC20(token);
+    }
 
     receive() external payable {
         emit Deposited(msg.sender, msg.value);
@@ -26,13 +31,6 @@ contract Bank is Ownable, ReentrancyGuard {
     function deposit() external payable {
         require(msg.value > 0, "No ETH sent");
         emit Deposited(msg.sender, msg.value);
-    }
-
-    IERC20 public dexToken;
-
-    function setDexToken(address token) external onlyOwner {
-        require(token != address(0), "Invalid token address");
-        dexToken = IERC20(token);
     }
 
     function setAuthorizedModule(address module, bool enabled) external onlyOwner {
@@ -54,7 +52,6 @@ contract Bank is Ownable, ReentrancyGuard {
     }
 
     function depositToken(uint256 amount) external nonReentrant {
-        require(address(dexToken) != address(0), "DEX token not set");
         require(amount > 0, "Amount must be greater than zero");
         require(dexToken.transferFrom(msg.sender, address(this), amount), "Token transfer failed");
         emit TokenDeposited(msg.sender, amount);
@@ -62,7 +59,6 @@ contract Bank is Ownable, ReentrancyGuard {
 
     function withdrawToken(address recipient, uint256 amount) external nonReentrant {
         require(authorizedModules[msg.sender], "Caller not authorized");
-        require(address(dexToken) != address(0), "DEX token not set");
         require(recipient != address(0), "Invalid recipient");
         require(amount > 0, "Amount must be greater than zero");
         require(dexToken.balanceOf(address(this)) >= amount, "Insufficient token balance");

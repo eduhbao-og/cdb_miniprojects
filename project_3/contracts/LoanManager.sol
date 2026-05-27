@@ -54,7 +54,7 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
         dex = IDEX(dexAddress);
         nft = IERC721(nftAddress);
         require(bankAddress != address(0), "Invalid bank address");
-        bank = Bank(bankAddress);
+        bank = Bank(payable(bankAddress));
         loanCounter = loan;
         paymentCycle = cycle;
         interest = interestRate;

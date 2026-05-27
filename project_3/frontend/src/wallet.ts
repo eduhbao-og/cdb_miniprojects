@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { CONTRACT_ADDRESSES } from "./config";
-import { NFT_ABI, DEX_ABI, MARKETPLACE_ABI, LOAN_MANAGER_ABI } from "./abis";
+import { NFT_ABI, DEX_ABI, MARKETPLACE_ABI, LOAN_MANAGER_ABI, BANK_ABI } from "./abis";
 
 declare global {
   interface Window {
@@ -52,6 +52,12 @@ export async function getLoanManagerContract(): Promise<ethers.Contract | null> 
   const signer = await getActiveSigner();
   if (!signer) return null;
   return new ethers.Contract(CONTRACT_ADDRESSES.LOAN_MANAGER, LOAN_MANAGER_ABI, signer);
+}
+
+export async function getBankContract(): Promise<ethers.Contract | null> {
+  const signer = await getActiveSigner();
+  if (!signer) return null;
+  return new ethers.Contract(CONTRACT_ADDRESSES.BANK, BANK_ABI, signer);
 }
 
 export async function connectWallet() {

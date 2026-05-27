@@ -42,7 +42,7 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
         require(bankAddress != address(0), "Invalid Bank address");
         dexContract = IDEX(dexAddress);
         nftContract = IERC721(nftAddress);
-        bank = Bank(bankAddress);
+        bank = Bank(payable(bankAddress));
     }
 
     function buyDex() external payable {
