@@ -101,13 +101,26 @@ let cachedSwapRate: bigint = 1000n;
 // Initialize dynamic tab switching
 function setupTabs() {
   const tabs = Array.from(document.querySelectorAll('.tab-btn')) as HTMLButtonElement[];
-  tabs.forEach((t) => t.addEventListener('click', () => {
+
+  function activateTab(target: string) {
     tabs.forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    const target = t.dataset.tab!;
+    const activeBtn = tabs.find(t => t.dataset.tab === target);
+    if (activeBtn) activeBtn.classList.add('active');
     document.querySelectorAll('.tab-panel').forEach(p => {
       (p as HTMLElement).classList.toggle('hidden', p.id !== target);
     });
+    localStorage.setItem('activeTab', target);
+  }
+
+  // Restore saved tab, or default to first
+  const savedTab = localStorage.getItem('activeTab');
+  if (savedTab && document.querySelector(`.tab-btn[data-tab="${savedTab}"]`)) {
+    activateTab(savedTab);
+  }
+
+  tabs.forEach((t) => t.addEventListener('click', () => {
+    const target = t.dataset.tab!;
+    activateTab(target);
     // Re-fetch data on tab switch to keep state fresh
     if (activeAccount) {
       refreshData();
@@ -415,6 +428,7 @@ function renderSaleCard(sale: any, marketplace: ethers.Contract) {
       const tx = await marketplace.buyNFT(sale.id, { value: sale.price });
       await tx.wait();
       showBanner(statusElement, "Purchased successfully!", "success");
+      buyButton.disabled = false;
       setTimeout(refreshData, 2000);
     } catch (err: any) {
       console.error(err);
@@ -474,11 +488,12 @@ function renderAuctionCard(auc: any, marketplace: ethers.Contract) {
         const tx = await marketplace.bid(auc.id, { value: bidVal });
         await tx.wait();
 
-        showBanner(statusElement, "Bid placed successfully!", "success");
-        setTimeout(refreshData, 2000);
-      } catch (err: any) {
-        console.error(err);
-        bidBtn.disabled = false;
+      showBanner(statusElement, "Bid placed successfully!", "success");
+      bidBtn.disabled = false;
+      setTimeout(refreshData, 2000);
+    } catch (err: any) {
+      console.error(err);
+      bidBtn.disabled = false;
         showBanner(statusElement, err.message || "Bid failed", "err");
       }
     });
@@ -490,11 +505,12 @@ function renderAuctionCard(auc: any, marketplace: ethers.Contract) {
         showBanner(statusElement, "Finalizing auction...", "info");
         const tx = await marketplace.endAuction(auc.id);
         await tx.wait();
-        showBanner(statusElement, "Auction finalized successfully!", "success");
-        setTimeout(refreshData, 2000);
-      } catch (err: any) {
-        console.error(err);
-        endBtn.disabled = false;
+      showBanner(statusElement, "Auction finalized successfully!", "success");
+      endBtn.disabled = false;
+      setTimeout(refreshData, 2000);
+    } catch (err: any) {
+      console.error(err);
+      endBtn.disabled = false;
         showBanner(statusElement, err.message || "Finalize failed", "err");
       }
     });
@@ -594,6 +610,7 @@ function renderPortfolioNFTCard(
       await sellTx.wait();
 
       showBanner(statusElement, "NFT Listed for sale!", "success");
+      sellBtnExec.disabled = false;
       setTimeout(refreshData, 2000);
     } catch (err: any) {
       console.error(err);
@@ -627,6 +644,7 @@ function renderPortfolioNFTCard(
       await tx.wait();
 
       showBanner(statusElement, "Auction started!", "success");
+      aucBtnExec.disabled = false;
       setTimeout(refreshData, 2000);
     } catch (err: any) {
       console.error(err);
@@ -660,6 +678,7 @@ function renderPortfolioNFTCard(
       await tx.wait();
 
       showBanner(statusElement, "NFT Loan request published!", "success");
+      loanBtnExec.disabled = false;
       setTimeout(refreshData, 2000);
     } catch (err: any) {
       console.error(err);
@@ -679,6 +698,7 @@ function renderPortfolioNFTCard(
       await tx.wait();
 
       showBanner(statusElement, "Token incinerated!", "success");
+      burnBtnExec.disabled = false;
       setTimeout(refreshData, 2000);
     } catch (err: any) {
       console.error(err);
@@ -735,6 +755,7 @@ function renderDEXLoanItem(id: number, loan: any, loanManager: ethers.Contract) 
       await tx.wait();
       
       showBanner(statusElement, "Payment settled!", "success");
+      payBtn.disabled = false;
       setTimeout(refreshData, 2000);
     } catch (err: any) {
       console.error(err);
@@ -755,6 +776,7 @@ function renderDEXLoanItem(id: number, loan: any, loanManager: ethers.Contract) 
       await tx.wait();
 
       showBanner(statusElement, "Loan terminated and collateral returned!", "success");
+      termBtn.disabled = false;
       setTimeout(refreshData, 2000);
     } catch (err: any) {
       console.error(err);
@@ -821,6 +843,7 @@ function renderNFTLoanRequest(loan: any, loanManager: ethers.Contract) {
         await tx.wait();
 
         showBanner(statusElement, "Loan funded successfully!", "success");
+        fundBtn.disabled = false;
         setTimeout(refreshData, 2000);
       } catch (err: any) {
         console.error(err);
@@ -885,6 +908,7 @@ function renderActiveNFTLoan(loan: any, loanManager: ethers.Contract) {
         await tx.wait();
 
         showBanner(statusElement, "Payment settled!", "success");
+        payBtn.disabled = false;
         setTimeout(refreshData, 2000);
       } catch (err: any) {
         console.error(err);
@@ -905,6 +929,7 @@ function renderActiveNFTLoan(loan: any, loanManager: ethers.Contract) {
         await tx.wait();
 
         showBanner(statusElement, "Loan terminated and NFT returned!", "success");
+        termBtn.disabled = false;
         setTimeout(refreshData, 2000);
       } catch (err: any) {
         console.error(err);
@@ -924,6 +949,7 @@ function renderActiveNFTLoan(loan: any, loanManager: ethers.Contract) {
         await tx.wait();
 
         showBanner(statusElement, "Loan status check completed!", "success");
+        checkBtn.disabled = false;
         setTimeout(refreshData, 2000);
       } catch (err: any) {
         console.error(err);
@@ -953,6 +979,7 @@ mintBtn.addEventListener('click', async () => {
     await tx.wait();
 
     showBanner(mintStatus, "Minted successfully! View it in your Portfolio tab.", "success");
+    mintBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1043,6 +1070,7 @@ executeSwapBtn.addEventListener('click', async () => {
 
     swapInputAmount.value = '';
     swapOutputAmount.value = '';
+    executeSwapBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1064,6 +1092,7 @@ approveDexMarketBtn.addEventListener('click', async () => {
     await tx.wait();
 
     showBanner(approveDexMarketStatus, "Approval granted successfully!", "success");
+    approveDexMarketBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1085,6 +1114,7 @@ approveNftMarketBtn.addEventListener('click', async () => {
     await tx.wait();
 
     showBanner(portfolioApprovalStatus, "Marketplace approved successfully!", "success");
+    approveNftMarketBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1105,6 +1135,7 @@ approveNftLoansBtn.addEventListener('click', async () => {
     await tx.wait();
 
     showBanner(portfolioApprovalStatus, "Loans Portal approved successfully!", "success");
+    approveNftLoansBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1126,6 +1157,7 @@ approveDexLoanManagerBtn.addEventListener('click', async () => {
     await tx.wait();
 
     showBanner(dexLoanRequestStatus, "DEX approved successfully!", "success");
+    approveDexLoanManagerBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1168,6 +1200,7 @@ borrowDexBtn.addEventListener('click', async () => {
     showBanner(dexLoanRequestStatus, "Loan created successfully! ETH added to wallet.", "success");
     dexLoanCollateralAmount.value = '';
     dexLoanDurationCycles.value = '';
+    borrowDexBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1196,6 +1229,7 @@ adminSetSwapRateBtn.addEventListener('click', async () => {
 
     showBanner(adminSwapRateStatus, "Swap rate updated successfully!", "success");
     adminSwapRateInput.value = '';
+    adminSetSwapRateBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1221,6 +1255,7 @@ adminSetMintPriceBtn.addEventListener('click', async () => {
 
     showBanner(adminNftStatus, "NFT Mint price updated successfully!", "success");
     adminMintPriceInput.value = '';
+    adminSetMintPriceBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1246,6 +1281,7 @@ adminSetBaseUriBtn.addEventListener('click', async () => {
 
     showBanner(adminNftStatus, "NFT Base URI updated successfully!", "success");
     adminBaseUriInput.value = '';
+    adminSetBaseUriBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1290,6 +1326,7 @@ adminSaveLoanParamsBtn.addEventListener('click', async () => {
     adminInterestInput.value = '';
     adminTerminationFeeInput.value = '';
     adminMaxDurationInput.value = '';
+    adminSaveLoanParamsBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1316,6 +1353,7 @@ adminEnableModuleBtn.addEventListener('click', async () => {
 
     showBanner(adminBankStatus, "Module enabled successfully!", "success");
     adminModuleAddressInput.value = '';
+    adminEnableModuleBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
@@ -1341,6 +1379,7 @@ adminDisableModuleBtn.addEventListener('click', async () => {
 
     showBanner(adminBankStatus, "Module disabled successfully!", "success");
     adminModuleAddressInput.value = '';
+    adminDisableModuleBtn.disabled = false;
     setTimeout(refreshData, 2000);
   } catch (err: any) {
     console.error(err);
