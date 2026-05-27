@@ -31,8 +31,8 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
     mapping(uint256 => Sale) public sales;
     mapping(uint256 => Auction) public auctions;
 
-    event ItemListed(address indexed seller, uint256 indexed tokenId, uint256 price);
-    event ItemSold(address indexed buyer, uint256 indexed tokenId, uint256 price);
+    event ItemListed(address indexed seller, uint256 indexed tokenId, uint256 price, bool isDex);
+    event ItemSold(address indexed buyer, uint256 indexed tokenId, uint256 price, bool isDex);
     event AuctionCreated(address indexed seller, uint256 indexed tokenId, uint256 minimumPrice, uint256 duration);
     event AuctionBid(address indexed bidder, uint256 indexed tokenId, uint256 price);
     event AuctionEnded(address indexed seller, address indexed buyer, uint256 indexed tokenId, uint256 finalPrice);
