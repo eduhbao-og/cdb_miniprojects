@@ -128,6 +128,13 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
         require(msg.sender == loan.borrower, "Only borrower can terminate");
         require(msg.value == loan.amount + termination, "Incorrect termination payment");
 
+        uint256 cyclesPassed = (block.timestamp - loan.startTime) / paymentCycle;
+        if (cyclesPassed > loan.paymentsMade) {
+            emit DEXloanFinished(loan.borrower, loan.amount);
+            delete DEXloans[loanId];
+            return;
+        }
+
         bank.deposit{value: msg.value}();
         bank.withdrawToken(msg.sender, loan.collateral);
         emit DEXloanFinished(loan.borrower, loan.amount);
@@ -224,6 +231,14 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
         NFTLoan storage loan = NFTloans[tokenId];
         require(msg.sender == loan.borrower, "Only borrower can terminate");
         require(msg.value == loan.amount + termination, "Incorrect termination payment");
+
+        uint256 cyclesPassed = (block.timestamp - loan.startTime) / paymentCycle;
+        if (cyclesPassed > loan.paymentsMade) {
+            nft.safeTransferFrom(address(this), loan.provider, tokenId);
+            emit NFTloanFinished(loan.borrower, loan.provider, loan.amount);
+            delete NFTloans[tokenId];
+            return;
+        }
 
         bank.deposit{value: msg.value}();
         bank.withdrawToken(loan.provider, loan.collateral);
