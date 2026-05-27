@@ -15,7 +15,9 @@ contract Bank is Ownable, ReentrancyGuard {
 
     IERC20 public dexToken;
 
-    constructor(address token) Ownable(msg.sender) {
+    constructor() Ownable(msg.sender) {}
+
+    function setDexToken(address token) external onlyOwner {
         require(token != address(0), "Invalid token address");
         dexToken = IERC20(token);
     }
@@ -52,6 +54,7 @@ contract Bank is Ownable, ReentrancyGuard {
     }
 
     function depositToken(uint256 amount) external nonReentrant {
+        require(address(dexToken) != address(0), "DEX token not set");
         require(amount > 0, "Amount must be greater than zero");
         require(dexToken.transferFrom(msg.sender, address(this), amount), "Token transfer failed");
         emit TokenDeposited(msg.sender, amount);
@@ -59,6 +62,7 @@ contract Bank is Ownable, ReentrancyGuard {
 
     function withdrawToken(address recipient, uint256 amount) external nonReentrant {
         require(authorizedModules[msg.sender], "Caller not authorized");
+        require(address(dexToken) != address(0), "DEX token not set");
         require(recipient != address(0), "Invalid recipient");
         require(amount > 0, "Amount must be greater than zero");
         require(dexToken.balanceOf(address(this)) >= amount, "Insufficient token balance");
