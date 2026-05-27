@@ -19,3 +19,12 @@ frontend-dev:
 
 frontend-build:
 	cd frontend && npm run build
+
+backend-install:
+	cd backend && npm install
+
+backend-dev:
+	cd backend && npm run dev
+
+backend-build:
+	cd backend && npm run build
