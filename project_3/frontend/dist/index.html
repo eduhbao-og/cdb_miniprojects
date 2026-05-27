@@ -583,7 +583,7 @@
         padding-top: 20px;
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-D9M4eJmf.js"></script>
+    <script type="module" crossorigin src="/assets/index-DoUVrZmq.js"></script>
   </head>
   <body>
     <div class="container">
@@ -709,10 +709,10 @@
                   DEX Contract Swap Rate: <span id="contractRateDisplay">1000 DEX / ETH</span>
                 </div>
                 <div class="balance-item" style="justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01);">
-                  Marketplace DEX Reserves: <span id="marketplaceDexReserves">0.0 DEX</span>
+                  Bank DEX Reserves: <span id="marketplaceDexReserves">0.0 DEX</span>
                 </div>
                 <div class="balance-item" style="justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01);">
-                  Marketplace ETH Reserves: <span id="marketplaceEthReserves">0.0 ETH</span>
+                  Bank ETH Reserves: <span id="marketplaceEthReserves">0.0 ETH</span>
                 </div>
                 <!-- Approve DEX for Marketplace Button -->
                 <div style="margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.05); padding-top: 16px;">
@@ -909,6 +909,34 @@
                 <div id="adminLoansStatus" class="status-banner"></div>
               </div>
             </div>
+          </div>
+
+          <!-- Bank Management -->
+          <div class="card" style="background: rgba(255,255,255,0.015); border-color: rgba(255, 255, 255, 0.04); margin-top: 20px;">
+            <div class="card-title" style="font-size: 15px;">Bank Management</div>
+            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+              <div class="balance-item" style="padding: 8px 14px;">
+                Bank ETH: <span id="adminBankEthBalance" style="font-weight:700; color:#fff;">0.0 ETH</span>
+              </div>
+              <div class="balance-item" style="padding: 8px 14px;">
+                Bank DEX: <span id="adminBankDexBalance" style="font-weight:700; color:#fff;">0.0 DEX</span>
+              </div>
+            </div>
+            <div class="grid-2" style="margin-bottom: 0;">
+              <div class="form-group">
+                <label>Authorized Module Address</label>
+                <input id="adminModuleAddressInput" type="text" placeholder="0x..." />
+              </div>
+              <div class="form-group" style="display: flex; align-items: flex-end; gap: 8px; margin-bottom: 16px;">
+                <button id="adminEnableModuleBtn" class="btn" style="padding: 10px 20px;">Enable Module</button>
+                <button id="adminDisableModuleBtn" class="btn btn-danger" style="padding: 10px 20px;">Disable Module</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Module Authorization Status</label>
+              <span id="adminModuleAuthStatus" style="font-size: 13px; color: var(--text-muted);">Enter an address and check below.</span>
+            </div>
+            <div id="adminBankStatus" class="status-banner"></div>
           </div>
         </section>
       </main>

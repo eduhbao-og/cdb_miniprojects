@@ -16,6 +16,7 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
         address seller;
         uint256 price;
         bool active;
+        bool isDex;
     }
 
     struct Auction {
@@ -73,18 +74,30 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
 
         nftContract.safeTransferFrom(msg.sender, address(this), tokenId);
 
-        sales[tokenId] = Sale({seller: msg.sender, price: price, active: true});
+        sales[tokenId] = Sale({seller: msg.sender, price: price, active: true, isDex: false});
         emit ItemListed(msg.sender, tokenId, price);
+    }
+
+    function sellNFTForDEX(uint256 tokenId, uint256 dexPrice) external {
+        require(dexPrice > 0, "Price must be greater than zero");
+        require(nftContract.ownerOf(tokenId) == msg.sender, "Not NFT owner");
+        require(!sales[tokenId].active, "Token already listed for sale");
+        require(!auctions[tokenId].active, "Token already in auction");
+
+        nftContract.safeTransferFrom(msg.sender, address(this), tokenId);
+
+        sales[tokenId] = Sale({seller: msg.sender, price: dexPrice, active: true, isDex: true});
+        emit ItemListed(msg.sender, tokenId, dexPrice);
     }
 
     function buyNFT(uint256 tokenId) external payable nonReentrant {
         Sale storage sale = sales[tokenId];
         require(sale.active, "Token not for sale");
+        require(!sale.isDex, "Sale is for DEX, not ETH");
         require(msg.value >= sale.price, "Insufficient payment amount");
 
         address seller = sale.seller;
         uint256 listedPrice = sale.price;
-        uint256 excess = msg.value - listedPrice;
 
         sale.active = false;
         sale.seller = address(0);
@@ -92,11 +105,34 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
         nftContract.safeTransferFrom(address(this), msg.sender, tokenId);
 
         bank.deposit{value: msg.value}();
-        bank.withdraw(payable(seller), listedPrice);
 
-        if (excess > 0) {
-            bank.withdraw(payable(msg.sender), excess);
-        }
+        uint256 fee = listedPrice * 5/100;
+        bank.withdraw(payable(bank.owner()), fee);
+        bank.withdraw(payable(seller), listedPrice - fee);
+
+        emit ItemSold(msg.sender, tokenId, listedPrice);
+    }
+
+    function buyNFTWithDEX(uint256 tokenId, uint256 dexAmount) external nonReentrant {
+        Sale storage sale = sales[tokenId];
+        require(sale.active, "Token not for sale");
+        require(sale.isDex, "Sale is for ETH, not DEX");
+        require(dexAmount >= sale.price, "Insufficient DEX amount");
+        require(dexContract.balanceOf(msg.sender) >= dexAmount, "Not enough DEX tokens");
+
+        address seller = sale.seller;
+        uint256 listedPrice = sale.price;
+
+        sale.active = false;
+        sale.seller = address(0);
+
+        nftContract.safeTransferFrom(address(this), msg.sender, tokenId);
+
+        require(dexContract.transferFrom(msg.sender, address(bank), dexAmount), "DEX transfer failed");
+
+        uint256 fee = listedPrice * 5 / 100;
+        bank.withdrawToken(payable(seller), listedPrice - fee);
+        bank.withdrawToken(payable(bank.owner()), fee);
 
         emit ItemSold(msg.sender, tokenId, listedPrice);
     }

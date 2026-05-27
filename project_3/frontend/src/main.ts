@@ -282,7 +282,7 @@ async function loadGridsAndLists(
         // Check if listed for sale
         const sale = await marketplace.sales(tokenId);
         if (sale.active) {
-          activeSalesList.push({ id: tokenId, seller: sale.seller, price: sale.price });
+          activeSalesList.push({ id: tokenId, seller: sale.seller, price: sale.price, isDex: sale.isDex });
         }
 
         // Check if listed for auction
@@ -409,12 +409,14 @@ async function loadGridsAndLists(
 function renderSaleCard(sale: any, marketplace: ethers.Contract) {
   const card = document.createElement('div');
   card.className = 'nft-item';
+  const currencyLabel = sale.isDex ? 'DEX' : 'ETH';
+  const buyLabel = sale.isDex ? 'Buy with DEX' : 'Buy with ETH';
   card.innerHTML = `
     <div class="nft-media">${sale.id}</div>
     <div class="nft-id">Nexus Token #${sale.id}</div>
     <div class="nft-seller">Seller: ${sale.seller.substring(0, 6)}...${sale.seller.substring(sale.seller.length - 4)}</div>
-    <div class="nft-price">${ethers.formatEther(sale.price)} ETH</div>
-    <button class="btn buy-btn" style="width: 100%;">Buy NFT</button>
+    <div class="nft-price">${parseFloat(ethers.formatEther(sale.price)).toFixed(4)} ${currencyLabel}</div>
+    <button class="btn buy-btn" style="width: 100%;">${buyLabel}</button>
     <div class="status-banner" style="margin-top: 8px;"></div>
   `;
 
@@ -424,9 +426,28 @@ function renderSaleCard(sale: any, marketplace: ethers.Contract) {
   buyButton.addEventListener('click', async () => {
     try {
       buyButton.disabled = true;
-      showBanner(statusElement, "Processing purchase...", "info");
-      const tx = await marketplace.buyNFT(sale.id, { value: sale.price });
-      await tx.wait();
+
+      if (sale.isDex) {
+        showBanner(statusElement, "Checking DEX allowance...", "info");
+        const dex = await getDEXContract();
+        if (!dex) return;
+
+        const allowance = await dex.allowance(activeAccount, CONTRACT_ADDRESSES.MARKETPLACE);
+        if (BigInt(allowance) < sale.price) {
+          showBanner(statusElement, "Approving DEX for Marketplace...", "info");
+          const appTx = await dex.approve(CONTRACT_ADDRESSES.MARKETPLACE, ethers.MaxUint256);
+          await appTx.wait();
+        }
+
+        showBanner(statusElement, "Processing DEX purchase...", "info");
+        const tx = await marketplace.buyNFTWithDEX(sale.id, sale.price);
+        await tx.wait();
+      } else {
+        showBanner(statusElement, "Processing ETH purchase...", "info");
+        const tx = await marketplace.buyNFT(sale.id, { value: sale.price });
+        await tx.wait();
+      }
+
       showBanner(statusElement, "Purchased successfully!", "success");
       buyButton.disabled = false;
       setTimeout(refreshData, 2000);
@@ -544,7 +565,13 @@ function renderPortfolioNFTCard(
       <!-- Sell Action Content -->
       <div class="action-section sell-section hidden" style="margin-top: 8px;">
         <div class="form-group" style="margin-bottom: 8px;">
-          <input class="sell-price-input" type="number" step="any" placeholder="Price (ETH)" style="padding: 6px 10px; font-size: 13px;" />
+          <div style="display:flex;gap:6px;">
+            <input class="sell-price-input" type="number" step="any" placeholder="Price" style="padding: 6px 10px; font-size: 13px; flex:1;" />
+            <select class="sell-currency-select" style="background:#071018; border:1px solid #21303a; color:#fff; padding:6px; border-radius:6px; font-family:inherit; font-size:13px;">
+              <option value="eth">ETH</option>
+              <option value="dex">DEX</option>
+            </select>
+          </div>
         </div>
         <button class="btn sell-exec-btn" style="width: 100%; padding: 6px 12px; font-size:13px;">List NFT</button>
       </div>
@@ -606,8 +633,15 @@ function renderPortfolioNFTCard(
       }
 
       showBanner(statusElement, "Creating marketplace listing...", "info");
-      const sellTx = await marketplace.sellNFT(nftObj.id, ethers.parseEther(price));
-      await sellTx.wait();
+      const sellPriceParsed = ethers.parseEther(price);
+      const currencySelect = card.querySelector('.sell-currency-select') as HTMLSelectElement;
+      if (currencySelect.value === 'dex') {
+        const sellTx = await marketplace.sellNFTForDEX(nftObj.id, sellPriceParsed);
+        await sellTx.wait();
+      } else {
+        const sellTx = await marketplace.sellNFT(nftObj.id, sellPriceParsed);
+        await sellTx.wait();
+      }
 
       showBanner(statusElement, "NFT Listed for sale!", "success");
       sellBtnExec.disabled = false;
@@ -1446,6 +1480,24 @@ async function init() {
       connectBtn.textContent = "Wallet Connected";
       await refreshData();
     }
+
+    // Listen for MetaMask account switches
+    (window as any).ethereum.on('accountsChanged', (accounts: string[]) => {
+      if (accounts.length === 0) {
+        activeAccount = null;
+        accountSpan.textContent = 'Disconnected';
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Connect Wallet';
+        ethBalanceSpan.textContent = '0.0000';
+        dexBalanceSpan.textContent = '0.00';
+      } else if (accounts[0].toLowerCase() !== activeAccount?.toLowerCase()) {
+        activeAccount = accounts[0];
+        accountSpan.textContent = `${activeAccount.substring(0, 6)}...${activeAccount.substring(activeAccount.length - 4)}`;
+        connectBtn.disabled = true;
+        connectBtn.textContent = "Wallet Connected";
+        refreshData();
+      }
+    });
   }
 }
 
