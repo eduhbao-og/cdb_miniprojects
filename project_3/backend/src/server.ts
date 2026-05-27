@@ -161,10 +161,11 @@ async function deleteOne(table: string, id: number): Promise<unknown> {
   return result.rows[0];
 }
 
-async function handleItemSold(buyer: string, tokenId: bigint, price: bigint): Promise<void> {
+async function handleItemSold(buyer: string, tokenId: bigint, price: bigint, isDex: boolean): Promise<void> {
+  const currency = isDex ? 'DEX' : 'ETH';
   await pool.query(
     'INSERT INTO sales (nft_id, buyer_address, price, cur) VALUES ($1, $2, $3, $4)',
-    [Number(tokenId), buyer, price.toString(), 'DEX'],
+    [Number(tokenId), buyer, price.toString(), currency],
   );
 }
 
@@ -196,8 +197,8 @@ function startEventListeners(): void {
   const marketplace = new ethers.Contract(addresses.MARKETPLACE, MARKETPLACE_ABI, provider);
   const loanManager = new ethers.Contract(addresses.LOAN_MANAGER, LOAN_MANAGER_ABI, provider);
 
-  marketplace.on('ItemSold', (buyer: string, tokenId: bigint, price: bigint) => {
-    void handleItemSold(buyer, tokenId, price);
+  marketplace.on('ItemSold', (buyer: string, tokenId: bigint, price: bigint, isDex: boolean) => {
+    void handleItemSold(buyer, tokenId, price, isDex);
   });
 
   marketplace.on('AuctionEnded', (seller: string, buyer: string, tokenId: bigint, finalPrice: bigint) => {
