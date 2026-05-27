@@ -6,6 +6,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Bank} from "./Bank.sol";
 
 contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
 
@@ -39,10 +40,12 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
 
     IDEX public dex;
     IERC721 public nft;
+    Bank public bank;
 
     constructor(
             address dexAddress,
             address nftAddress,
+            address bankAddress,
             uint256 loan, 
             uint256 cycle, 
             uint256 interestRate, 
@@ -50,6 +53,8 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
             uint256 duration) Ownable(msg.sender) {
         dex = IDEX(dexAddress);
         nft = IERC721(nftAddress);
+        require(bankAddress != address(0), "Invalid bank address");
+        bank = Bank(bankAddress);
         loanCounter = loan;
         paymentCycle = cycle;
         interest = interestRate;
@@ -71,9 +76,9 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
 
         uint256 loanValue = dex.DEXtoETH(dexAmount) / 2;
         require(loanValue > 0, "Loan value too small");
-        require(address(this).balance >= loanValue, "Insufficient liquidity");
+        require(bank.getBalance() >= loanValue, "Insufficient liquidity");
 
-        require(dex.transferFrom(msg.sender, address(this), dexAmount), "DEX transfer failed");
+        require(dex.transferFrom(msg.sender, address(bank), dexAmount), "DEX transfer to bank failed");
 
         DEXloans[loanCounter] = DEXLoan({
             borrower: msg.sender,
@@ -87,13 +92,16 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
         emit DEXloanCreated(msg.sender, loanValue, deadline);
         loanCounter++;
 
-        (bool success, ) = msg.sender.call{value: loanValue}("");
-        require(success, "ETH transfer failed");
+        bank.withdraw(payable(msg.sender), loanValue);
     }
 
     function makeDEXLoanPayment(uint256 loanId) external payable {
         DEXLoan storage loan = DEXloans[loanId];
         require(msg.sender == loan.borrower, "Only borrower can pay");
+
+        if (msg.value > 0) {
+            bank.deposit{value: msg.value}();
+        }
 
         uint256 cyclesPassed = (block.timestamp - loan.startTime) / paymentCycle;
         if (cyclesPassed > loan.paymentsMade) {
@@ -106,7 +114,7 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
 
         if (loan.paymentsMade == loan.deadline - 1) {
             require(msg.value == payment + loan.amount, "Incorrect final payment");
-            require(dex.transfer(loan.borrower, loan.collateral), "Collateral return failed");
+            bank.withdrawToken(loan.borrower, loan.collateral);
             emit DEXloanFinished(loan.borrower, loan.amount);
             delete DEXloans[loanId];
         } else {
@@ -120,7 +128,8 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
         require(msg.sender == loan.borrower, "Only borrower can terminate");
         require(msg.value == loan.amount + termination, "Incorrect termination payment");
 
-        require(dex.transfer(msg.sender, loan.collateral), "Collateral return failed");
+        bank.deposit{value: msg.value}();
+        bank.withdrawToken(msg.sender, loan.collateral);
         emit DEXloanFinished(loan.borrower, loan.amount);
         delete DEXloans[loanId];
     }
@@ -141,7 +150,7 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
         require(deadline > 0 && deadline <= maxLoanDuration, "Invalid deadline");
 
         require(loanValue > 0, "Loan value too small");
-        require(address(this).balance >= loanValue, "Insufficient liquidity");
+        require(bank.getBalance() >= loanValue, "Insufficient liquidity");
 
         nft.safeTransferFrom(msg.sender, address(this), tokenId);
 
@@ -166,21 +175,24 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
         require(loan.borrower != msg.sender, "Cannot place collateral on self NFT loan");
 
         require(dex.balanceOf(msg.sender) >= loan.collateral, "Not enough DEX tokens");
-        require(address(this).balance >= loan.amount, "Insufficient liquidity");
+        require(bank.getBalance() >= loan.amount, "Insufficient liquidity");
 
-        require(dex.transferFrom(msg.sender, address(this), loan.collateral), "DEX transfer failed");
+        require(dex.transferFrom(msg.sender, address(bank), loan.collateral), "DEX transfer to bank failed");
 
         NFTloans[tokenId].provider = msg.sender;
         NFTloans[tokenId].startTime = block.timestamp;
 
         emit NFTloanCreated(loan.borrower, loan.provider, loan.amount, loan.deadline);
-        (bool success, ) = msg.sender.call{value: loan.amount}("");
-        require(success, "ETH transfer failed");
+        bank.withdraw(payable(msg.sender), loan.amount);
     }
 
     function makeNFTLoanPayment(uint256 tokenId) external payable nonReentrant{
         NFTLoan storage loan = NFTloans[tokenId];
         require(msg.sender == loan.borrower, "Only borrower can pay");
+
+        if (msg.value > 0) {
+            bank.deposit{value: msg.value}();
+        }
 
         uint256 cyclesPassed = (block.timestamp - loan.startTime) / paymentCycle;
         if (cyclesPassed > loan.paymentsMade) {
@@ -195,9 +207,8 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
         if (loan.paymentsMade == loan.deadline - 1) {
             require(msg.value == payment + loan.amount, "Incorrect final payment");
 
-            require(dex.transfer(loan.provider, loan.collateral), "Collateral return failed");
-            (bool success, ) = loan.provider.call{value: (loan.amount * interest) / (2 * 100)}("");
-            require(success, "ETH transfer failed");
+            bank.withdrawToken(loan.provider, loan.collateral);
+            bank.withdraw(payable(loan.provider), (loan.amount * interest) / (2 * 100));
 
             nft.safeTransferFrom(address(this), msg.sender, tokenId);
 
@@ -214,9 +225,9 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
         require(msg.sender == loan.borrower, "Only borrower can terminate");
         require(msg.value == loan.amount + termination, "Incorrect termination payment");
 
-        require(dex.transfer(loan.provider, loan.collateral), "Collateral return failed");
-        (bool success, ) = loan.provider.call{value: termination}("");
-        require(success, "ETH transfer failed");
+        bank.deposit{value: msg.value}();
+        bank.withdrawToken(loan.provider, loan.collateral);
+        bank.withdraw(payable(loan.provider), termination);
 
         nft.safeTransferFrom(address(this), msg.sender, tokenId);
     

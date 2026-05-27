@@ -2,16 +2,20 @@ pragma solidity ^0.8.28;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Bank} from "./Bank.sol";
 
 contract DEXContract is ERC20, Ownable {
 
     uint256 public dexSwapRate;
+    Bank public bank;
 
-    constructor(uint256 swapRate) ERC20("DEX", "DEX") Ownable(msg.sender) {
+    constructor(uint256 swapRate, address bankAddress) ERC20("DEX", "DEX") Ownable(msg.sender) {
         require(swapRate > 0, "Swap rate must be positive");
         dexSwapRate = swapRate;
+        require(bankAddress != address(0), "Invalid bank address");
+        bank = Bank(bankAddress);
         _mint(address(this), 10**18);
-        _transfer(address(this), msg.sender, 10**18);
+        bank.depositToken(10**18);
     }
 
     function DEXtoETH(uint256 dexAmount) public view returns (uint256) {
@@ -31,5 +35,9 @@ contract DEXContract is ERC20, Ownable {
         dexSwapRate = swapRate;
     }
 
-    receive() external payable {}
+    receive() external payable {
+        if (address(bank) != address(0)) {
+            bank.deposit{value: msg.value}();
+        }
+    }
 }

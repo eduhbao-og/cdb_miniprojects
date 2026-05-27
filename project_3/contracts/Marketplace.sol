@@ -4,11 +4,13 @@ import {IDEX} from "./IDEX.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Bank} from "./Bank.sol";
 
 contract Marketplace is ERC721Holder, ReentrancyGuard {
 
     IERC721 public nftContract;
     IDEX public dexContract;
+    Bank public bank;
 
     struct Sale {
         address seller;
@@ -34,33 +36,33 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
     event AuctionBid(address indexed bidder, uint256 indexed tokenId, uint256 price);
     event AuctionEnded(address indexed seller, address indexed buyer, uint256 indexed tokenId, uint256 finalPrice);
 
-    constructor(address nftAddress, address dexAddress) {
+    constructor(address nftAddress, address dexAddress, address bankAddress) {
         require(nftAddress != address(0), "Invalid NFT address");
         require(dexAddress != address(0), "Invalid DEX address");
+        require(bankAddress != address(0), "Invalid Bank address");
         dexContract = IDEX(dexAddress);
         nftContract = IERC721(nftAddress);
+        bank = Bank(bankAddress);
     }
 
     function buyDex() external payable {
         require(msg.value > 0, "No ETH provided");
-
         uint256 dexTotal = dexContract.ETHtoDEX(msg.value);
-        require(dexContract.balanceOf(address(this)) >= dexTotal, "Not enough DEX tokens in contract");
+        require(dexContract.balanceOf(address(bank)) >= dexTotal, "Not enough DEX tokens in bank");
 
-        dexContract.transfer(msg.sender, dexTotal);
+        bank.deposit{value: msg.value}();
+        bank.withdrawToken(msg.sender, dexTotal);
     }
 
     function sellDex(uint256 dexAmount) external nonReentrant {
         require(dexAmount > 0, "DEX amount must be greater than zero");
         require(dexContract.balanceOf(msg.sender) >= dexAmount, "Not enough DEX tokens");
-
         uint256 ethTotal = dexContract.DEXtoETH(dexAmount);
-        require(address(this).balance >= ethTotal, "Not enough ETH in contract");
+        require(bank.getBalance() >= ethTotal, "Not enough ETH in bank");
 
-        dexContract.transferFrom(msg.sender, address(this), dexAmount);
+        require(dexContract.transferFrom(msg.sender, address(bank), dexAmount), "DEX transfer to bank failed");
 
-        (bool success, ) = msg.sender.call{value: ethTotal}("");
-        require(success, "ETH transfer failed");
+        bank.withdraw(payable(msg.sender), ethTotal);
     }
 
     function sellNFT(uint256 tokenId, uint256 price) external {
@@ -89,12 +91,11 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
 
         nftContract.safeTransferFrom(address(this), msg.sender, tokenId);
 
-        (bool success, ) = seller.call{value: listedPrice}("");
-        require(success, "Payment transfer failed");
+        bank.deposit{value: msg.value}();
+        bank.withdraw(payable(seller), listedPrice);
 
         if (excess > 0) {
-            (bool refundSuccess, ) = msg.sender.call{value: excess}("");
-            require(refundSuccess, "Refund transfer failed");
+            bank.withdraw(payable(msg.sender), excess);
         }
 
         emit ItemSold(msg.sender, tokenId, listedPrice);
@@ -128,9 +129,11 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
         require(msg.value >= auctionItem.minimumPrice, "Bid below minimum price");
         require(msg.value > auctionItem.highestBid, "Bid must be higher than current highest bid");
 
+        // deposit new bid to bank then refund previous bidder from bank
+        bank.deposit{value: msg.value}();
+
         if (auctionItem.highestBidder != address(0)) {
-            (bool refunded, ) = auctionItem.highestBidder.call{value: auctionItem.highestBid}("");
-            require(refunded, "Refund failed");
+            bank.withdraw(payable(auctionItem.highestBidder), auctionItem.highestBid);
         }
 
         auctionItem.highestBid = msg.value;
@@ -154,8 +157,7 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
 
         if (buyer != address(0)) {
             nftContract.safeTransferFrom(address(this), buyer, tokenId);
-            (bool success, ) = seller.call{value: finalPrice}("");
-            require(success, "Payment transfer failed");
+            bank.withdraw(payable(seller), finalPrice);
         } else {
             nftContract.safeTransferFrom(address(this), seller, tokenId);
         }
