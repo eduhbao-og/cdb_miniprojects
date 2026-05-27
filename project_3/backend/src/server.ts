@@ -20,7 +20,7 @@ app.use(
 
 const pool = new Pool({
   connectionString:
-    process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/postgres',
+    process.env.DATABASE_URL || 'postgres://cdb_user:cdb_password@localhost:5432/cdb_db',
 });
 
 interface SaleRecord {
