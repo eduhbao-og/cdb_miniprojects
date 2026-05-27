@@ -1,6 +1,6 @@
 # Makefile for project_3
 
-.PHONY: compile node deploy deploy-local frontend-install frontend-dev frontend-build backend-install backend-dev backend-build db-start db-stop db-setup dev-all
+.PHONY: compile node deploy deploy-local frontend-install frontend-dev frontend-build
 
 compile:
 	npx hardhat compile
@@ -30,12 +30,10 @@ backend-build:
 	cd backend && npm run build
 
 db-start:
-	@echo "Starting system PostgreSQL service (may require sudo)"
-	sudo systemctl start postgresql 
+	docker run --name postgres_cdb -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres -p 5432:5432 -d postgres:latest
 
 db-stop:
-	@echo "Stopping system PostgreSQL service (may require sudo)"
-	sudo systemctl stop postgresql 
+	docker stop postgres_cdb && docker rm postgres_cdb
 
 db-setup:
 	psql -h localhost -U postgres -d postgres -c "CREATE USER cdb_user WITH PASSWORD 'cdb_password';" || true
