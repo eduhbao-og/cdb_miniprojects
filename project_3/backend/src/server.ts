@@ -3,6 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 import express, { Request, Response } from 'express';
+import cors from 'cors';
 import { ethers } from 'ethers';
 import { Pool } from 'pg';
 import { LOAN_MANAGER_ABI, MARKETPLACE_ABI } from './abis';
@@ -10,6 +11,12 @@ import { LOAN_MANAGER_ABI, MARKETPLACE_ABI } from './abis';
 const app = express();
 
 app.use(express.json());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
+    credentials: true,
+  }),
+);
 
 const pool = new Pool({
   connectionString:
