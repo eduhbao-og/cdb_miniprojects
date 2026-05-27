@@ -108,6 +108,8 @@ async function main() {
   LOAN_MANAGER: "${loanManagerAddress}",
   BANK: "${bankAddress}"
 };
+
+export const BACKEND_URL = "http://localhost:3000";
 `;
 
   fs.writeFileSync(frontendConfigPath, configContent, "utf-8");

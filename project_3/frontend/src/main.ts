@@ -1,4 +1,4 @@
-import { CONTRACT_ADDRESSES } from './config';
+import { CONTRACT_ADDRESSES, BACKEND_URL } from './config';
 import {
   connectWallet as walletConnect,
   provider,
@@ -241,6 +241,9 @@ async function refreshData() {
 
     // 9. Load grids (NFTs, Listings, Auctions, Loans)
     await loadGridsAndLists(nft, dex, marketplace, loanManager);
+
+    // 10. Load history from backend
+    fetchHistory(activeAccount);
 
   } catch (err) {
     console.error("Refresh error:", err);
@@ -1463,9 +1466,157 @@ connectBtn.addEventListener('click', async () => {
   }
 });
 
-// Check if MetaMask is already connected on startup
+// ========== HISTORY TAB ==========
+
+function setupHistoryTabs() {
+  const subtabs = Array.from(document.querySelectorAll('.subtab-btn')) as HTMLButtonElement[];
+
+  subtabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      subtabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const target = btn.dataset.subtab!;
+      document.querySelectorAll('.subtab-panel').forEach(p => {
+        (p as HTMLElement).classList.toggle('hidden', p.id !== target);
+      });
+    });
+  });
+}
+
+async function fetchHistory(address: string) {
+  await Promise.all([
+    renderHistoryLoans(address),
+    renderHistorySales(address),
+    renderHistoryAuctions(address)
+  ]);
+}
+
+// ── Loans ──
+async function renderHistoryLoans(address: string) {
+  const loadingEl = document.getElementById('historyLoadingLoans')!;
+  const contentEl = document.getElementById('historyLoansContent')!;
+  loadingEl.textContent = 'Loading loan history...';
+
+  try {
+    const [dexRes, nftBorrowRes, nftProviderRes] = await Promise.all([
+      fetch(`${BACKEND_URL}/api/dexloans/borrower/${address}`),
+      fetch(`${BACKEND_URL}/api/nftloans/borrower/${address}`),
+      fetch(`${BACKEND_URL}/api/nftloans/provider/${address}`)
+    ]);
+
+    const dexLoans: any[] = dexRes.ok ? await dexRes.json() : [];
+    const nftBorrows: any[] = nftBorrowRes.ok ? await nftBorrowRes.json() : [];
+    const nftProviders: any[] = nftProviderRes.ok ? await nftProviderRes.json() : [];
+
+    type LoanRow = { type: string; id: number; amount: string; counterparty: string; role: string };
+    const rows: LoanRow[] = [
+      ...dexLoans.map(l => ({ type: 'DEX', id: l.id, amount: l.amount, counterparty: '-', role: 'Borrower' })),
+      ...nftBorrows.map(l => ({ type: 'NFT', id: l.id, amount: l.amount, counterparty: l.provider_id, role: 'Borrower' })),
+      ...nftProviders.map(l => ({ type: 'NFT', id: l.id, amount: l.amount, counterparty: l.borrower_id, role: 'Provider' }))
+    ];
+
+    if (rows.length === 0) {
+      contentEl.innerHTML = `<div class="hist-empty">No loan history found.</div>`;
+    } else {
+      contentEl.innerHTML = `
+        <table class="hist-table">
+          <thead><tr><th>Type</th><th>#</th><th>Amount</th><th>Counterparty</th><th>Role</th></tr></thead>
+          <tbody>${rows.map(r => `
+            <tr>
+              <td>${r.type}</td>
+              <td>${r.id}</td>
+              <td>${parseFloat(ethers.formatEther(r.amount)).toFixed(4)}</td>
+              <td>${r.counterparty !== '-' ? `${r.counterparty.substring(0,6)}…${r.counterparty.substring(r.counterparty.length-4)}` : '-'}</td>
+              <td>${r.role}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    }
+    loadingEl.textContent = '';
+  } catch (err: any) {
+    loadingEl.textContent = 'Failed to load loan history';
+    contentEl.innerHTML = `<div class="hist-empty">Error: ${err.message}</div>`;
+  }
+}
+
+// ── Sales ──
+async function renderHistorySales(address: string) {
+  const loadingEl = document.getElementById('historyLoadingSales')!;
+  const contentEl = document.getElementById('historySalesContent')!;
+  loadingEl.textContent = 'Loading sale history...';
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/sales/by-buyer/${address}`);
+    const sales: any[] = res.ok ? await res.json() : [];
+
+    if (sales.length === 0) {
+      contentEl.innerHTML = `<div class="hist-empty">No sale history found.</div>`;
+    } else {
+      contentEl.innerHTML = `
+        <table class="hist-table">
+          <thead><tr><th>NFT #</th><th>Price</th><th>Currency</th></tr></thead>
+          <tbody>${sales.map(s => `
+            <tr>
+              <td>${s.nft_id}</td>
+              <td>${parseFloat(ethers.formatEther(s.price)).toFixed(4)}</td>
+              <td>${s.cur}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    }
+    loadingEl.textContent = '';
+  } catch (err: any) {
+    loadingEl.textContent = 'Failed to load sale history';
+    contentEl.innerHTML = `<div class="hist-empty">Error: ${err.message}</div>`;
+  }
+}
+
+// ── Auctions ──
+async function renderHistoryAuctions(address: string) {
+  const loadingEl = document.getElementById('historyLoadingAuctions')!;
+  const contentEl = document.getElementById('historyAuctionsContent')!;
+  loadingEl.textContent = 'Loading auction history...';
+
+  try {
+    const [sellerRes, buyerRes] = await Promise.all([
+      fetch(`${BACKEND_URL}/api/auctions/by-seller/${address}`),
+      fetch(`${BACKEND_URL}/api/auctions/by-buyer/${address}`)
+    ]);
+
+    const sellerAucs: any[] = sellerRes.ok ? await sellerRes.json() : [];
+    const buyerAucs: any[] = buyerRes.ok ? await buyerRes.json() : [];
+
+    type AucRow = { nft_id: number; role: string; counterparty: string; price: string };
+    const rows: AucRow[] = [
+      ...sellerAucs.map(a => ({ nft_id: a.nft_id, role: 'Seller', counterparty: a.buyer_address, price: a.price })),
+      ...buyerAucs.map(a => ({ nft_id: a.nft_id, role: 'Buyer', counterparty: a.seller_address, price: a.price }))
+    ];
+
+    if (rows.length === 0) {
+      contentEl.innerHTML = `<div class="hist-empty">No auction history found.</div>`;
+    } else {
+      contentEl.innerHTML = `
+        <table class="hist-table">
+          <thead><tr><th>NFT #</th><th>Role</th><th>Counterparty</th><th>Final Price</th></tr></thead>
+          <tbody>${rows.map(r => `
+            <tr>
+              <td>${r.nft_id}</td>
+              <td>${r.role}</td>
+              <td>${r.counterparty ? `${r.counterparty.substring(0,6)}…${r.counterparty.substring(r.counterparty.length-4)}` : '-'}</td>
+              <td>${parseFloat(ethers.formatEther(r.price)).toFixed(4)}</td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+    }
+    loadingEl.textContent = '';
+  } catch (err: any) {
+    loadingEl.textContent = 'Failed to load auction history';
+    contentEl.innerHTML = `<div class="hist-empty">Error: ${err.message}</div>`;
+  }
+}
+
+// ========== INIT ==========
+
 async function init() {
   setupTabs();
+  setupHistoryTabs();
   
   if ((window as any).ethereum == null) {
     accountSpan.textContent = 'MetaMask not found';

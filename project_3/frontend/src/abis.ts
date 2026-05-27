@@ -52,8 +52,8 @@ export const MARKETPLACE_ABI = [
   "function endAuction(uint256 tokenId) external",
   "function sales(uint256 tokenId) external view returns (address seller, uint256 price, bool active, bool isDex)",
   "function auctions(uint256 tokenId) external view returns (address seller, uint256 minimumPrice, uint256 highestBid, address highestBidder, uint256 endTime, bool active)",
-  "event ItemListed(address indexed seller, uint256 indexed tokenId, uint256 price)",
-  "event ItemSold(address indexed buyer, uint256 indexed tokenId, uint256 price)",
+  "event ItemListed(address indexed seller, uint256 indexed tokenId, uint256 price, bool isDex)",
+  "event ItemSold(address indexed buyer, uint256 indexed tokenId, uint256 price, bool isDex)",
   "event AuctionCreated(address indexed seller, uint256 indexed tokenId, uint256 minimumPrice, uint256 duration)",
   "event AuctionBid(address indexed bidder, uint256 indexed tokenId, uint256 price)",
   "event AuctionEnded(address indexed seller, address indexed buyer, uint256 indexed tokenId, uint256 finalPrice)"

@@ -239,6 +239,72 @@
         display: none !important;
       }
 
+      /* History Subtabs */
+      .history-subtabs {
+        display: flex;
+        gap: 8px;
+        margin: 16px 0;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 8px;
+      }
+
+      .subtab-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 14px;
+        transition: background 0.2s, color 0.2s;
+      }
+
+      .subtab-btn:hover {
+        background: rgba(255,255,255,0.05);
+        color: var(--text);
+      }
+
+      .subtab-btn.active {
+        background: linear-gradient(135deg, #00c9a7, #1a8fe0);
+        color: #fff;
+      }
+
+      .subtab-panel {
+        display: block;
+        animation: fadeIn 0.3s ease;
+      }
+
+      .hist-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      .hist-table th {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-muted);
+        font-weight: 600;
+      }
+
+      .hist-table td {
+        padding: 10px 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+      }
+
+      .hist-table tr:hover td {
+        background: rgba(255,255,255,0.02);
+      }
+
+      .hist-empty {
+        color: var(--text-muted);
+        font-size: 14px;
+        padding: 24px 0;
+        text-align: center;
+      }
+
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
@@ -615,6 +681,7 @@
         <button class="tab-btn" data-tab="dex-swap">💱 DEX Swap</button>
         <button class="tab-btn" data-tab="portfolio">💼 My Portfolio</button>
         <button class="tab-btn" data-tab="loans">🏦 Loans Portal</button>
+        <button class="tab-btn" data-tab="history">📜 History</button>
         <button id="adminTabBtn" class="tab-btn hidden" data-tab="admin">🛡️ Admin Panel</button>
       </nav>
 
@@ -936,6 +1003,32 @@
               <span id="adminModuleAuthStatus" style="font-size: 13px; color: var(--text-muted);">Enter an address and check below.</span>
             </div>
             <div id="adminBankStatus" class="status-banner"></div>
+          </div>
+        </section>
+
+        <!-- HISTORY TAB -->
+        <section id="history" class="tab-panel hidden">
+          <h2>📜 History</h2>
+
+          <div class="history-subtabs">
+            <button class="subtab-btn active" data-subtab="hist-loans">Loans</button>
+            <button class="subtab-btn" data-subtab="hist-sales">Sales</button>
+            <button class="subtab-btn" data-subtab="hist-auctions">Auctions</button>
+          </div>
+
+          <div id="hist-loans" class="subtab-panel">
+            <div id="historyLoadingLoans" class="status-banner" style="margin: 10px 0;"></div>
+            <div id="historyLoansContent"></div>
+          </div>
+
+          <div id="hist-sales" class="subtab-panel hidden">
+            <div id="historyLoadingSales" class="status-banner" style="margin: 10px 0;"></div>
+            <div id="historySalesContent"></div>
+          </div>
+
+          <div id="hist-auctions" class="subtab-panel hidden">
+            <div id="historyLoadingAuctions" class="status-banner" style="margin: 10px 0;"></div>
+            <div id="historyAuctionsContent"></div>
           </div>
         </section>
       </main>

@@ -75,7 +75,7 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
         nftContract.safeTransferFrom(msg.sender, address(this), tokenId);
 
         sales[tokenId] = Sale({seller: msg.sender, price: price, active: true, isDex: false});
-        emit ItemListed(msg.sender, tokenId, price);
+        emit ItemListed(msg.sender, tokenId, price, false);
     }
 
     function sellNFTForDEX(uint256 tokenId, uint256 dexPrice) external {
@@ -87,7 +87,7 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
         nftContract.safeTransferFrom(msg.sender, address(this), tokenId);
 
         sales[tokenId] = Sale({seller: msg.sender, price: dexPrice, active: true, isDex: true});
-        emit ItemListed(msg.sender, tokenId, dexPrice);
+        emit ItemListed(msg.sender, tokenId, dexPrice, true);
     }
 
     function buyNFT(uint256 tokenId) external payable nonReentrant {
@@ -110,7 +110,7 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
         bank.withdraw(payable(bank.owner()), fee);
         bank.withdraw(payable(seller), listedPrice - fee);
 
-        emit ItemSold(msg.sender, tokenId, listedPrice);
+        emit ItemSold(msg.sender, tokenId, listedPrice, false);
     }
 
     function buyNFTWithDEX(uint256 tokenId, uint256 dexAmount) external nonReentrant {
@@ -134,7 +134,7 @@ contract Marketplace is ERC721Holder, ReentrancyGuard {
         bank.withdrawToken(payable(seller), listedPrice - fee);
         bank.withdrawToken(payable(bank.owner()), fee);
 
-        emit ItemSold(msg.sender, tokenId, listedPrice);
+        emit ItemSold(msg.sender, tokenId, listedPrice, true);
     }
 
     function auction(uint256 tokenId, uint256 minimumPrice, uint256 duration) external {
