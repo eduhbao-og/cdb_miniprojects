@@ -35,25 +35,3 @@ CREATE TABLE NFTLoans (
     provider_id  VARCHAR(256),
     amount       NUMERIC(78, 0) NOT NULL
 );
-
-CREATE TABLE auctions (
-    id SERIAL PRIMARY KEY,
-    nft_id INTEGER,
-    seller_address VARCHAR(256),
-    buyer_address VARCHAR(256),
-    price NUMERIC(20, 0) DEFAULT 0
-);
-
-CREATE TABLE DEXloans (
-    id SERIAL PRIMARY KEY,
-    borrower_address VARCHAR(256),
-    amount NUMERIC(20, 0) NOT NULL
-);
-
-CREATE TABLE NFTLoans (
-    id SERIAL PRIMARY KEY,
-    nft_id INTEGER,
-    borrower_id VARCHAR(256),
-    provider_id VARCHAR(256),
-    amount NUMERIC(20, 0) NOT NULL
-);
