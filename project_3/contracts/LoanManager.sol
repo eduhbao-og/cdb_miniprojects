@@ -66,6 +66,7 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
     event DEXloanFinished(address indexed borrower, uint256 amount);
     event NFTloanRequested(address indexed borrower, uint256 amount, uint256 deadline);
     event NFTloanCreated(address indexed borrower, address indexed provider, uint256 amount, uint256 deadline);
+    event NFTloanCancelled(address indexed borrower, uint256 indexed tokenId);
     event NFTloanFinished(address indexed borrower, address indexed provider, uint256 amount);
 
     receive() external payable {}
@@ -157,7 +158,6 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
         require(deadline > 0 && deadline <= maxLoanDuration, "Invalid deadline");
 
         require(loanValue > 0, "Loan value too small");
-        require(bank.getBalance() >= loanValue, "Insufficient liquidity");
 
         nft.safeTransferFrom(msg.sender, address(this), tokenId);
 
@@ -172,6 +172,18 @@ contract LoanManager is Ownable, ERC721Holder, ReentrancyGuard {
         });
 
         emit NFTloanRequested(msg.sender, loanValue, deadline);
+    }
+
+    function cancelUnfundedNFTLoan(uint256 tokenId) external nonReentrant {
+        NFTLoan storage loan = NFTloans[tokenId];
+        require(loan.borrower == msg.sender, "Only borrower can cancel");
+        require(loan.provider == address(0), "Loan already has provider");
+        require(loan.startTime == 0, "Loan already started");
+
+        delete NFTloans[tokenId];
+        nft.safeTransferFrom(address(this), msg.sender, tokenId);
+
+        emit NFTloanCancelled(msg.sender, tokenId);
     }
 
     function loanNFT(uint256 tokenId) external nonReentrant {

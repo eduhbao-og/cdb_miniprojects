@@ -197,6 +197,9 @@ async function handleNftLoanFinished(borrower: string, provider: string, amount:
   );
 }
 
+let lastPolledBlock = 0;
+let pollInterval: ReturnType<typeof setInterval> | null = null;
+
 function startEventListeners(): void {
   const addresses = getContractAddresses();
   const provider = new ethers.JsonRpcProvider(RPC_URL);
@@ -204,23 +207,64 @@ function startEventListeners(): void {
   const marketplace = new ethers.Contract(addresses.MARKETPLACE, MARKETPLACE_ABI, provider);
   const loanManager = new ethers.Contract(addresses.LOAN_MANAGER, LOAN_MANAGER_ABI, provider);
 
-  marketplace.on('ItemSold', (buyer: string, tokenId: bigint, price: bigint, isDex: boolean) => {
-    void handleItemSold(buyer, tokenId, price, isDex);
-  });
-
-  marketplace.on('AuctionEnded', (seller: string, buyer: string, tokenId: bigint, finalPrice: bigint) => {
-    void handleAuctionEnded(seller, buyer, tokenId, finalPrice);
-  });
-
-  loanManager.on('DEXloanFinished', (borrower: string, amount: bigint) => {
-    void handleDexLoanFinished(borrower, amount);
-  });
-
-  loanManager.on('NFTloanFinished', (borrower: string, provider: string, amount: bigint) => {
-    void handleNftLoanFinished(borrower, provider, amount);
-  });
-
   console.log('Listening for contract completion events at:', addresses);
+
+  // Initial catch-up: poll from block 0
+  void pollEvents(marketplace, loanManager, provider);
+
+  // Then poll every 2 seconds for new blocks
+  pollInterval = setInterval(() => pollEvents(marketplace, loanManager, provider), 2000);
+}
+
+async function pollEvents(
+  marketplace: ethers.Contract,
+  loanManager: ethers.Contract,
+  provider: ethers.JsonRpcProvider
+): Promise<void> {
+  try {
+    const currentBlock = await provider.getBlockNumber();
+    const fromBlock = lastPolledBlock > 0 ? lastPolledBlock + 1 : 0;
+    if (fromBlock > currentBlock) return;
+
+    const [newSales, newAuctions, newDexLoans, newNftLoans] = await Promise.all([
+      marketplace.queryFilter(marketplace.filters.ItemSold(), fromBlock, 'latest'),
+      marketplace.queryFilter(marketplace.filters.AuctionEnded(), fromBlock, 'latest'),
+      loanManager.queryFilter(loanManager.filters.DEXloanFinished(), fromBlock, 'latest'),
+      loanManager.queryFilter(loanManager.filters.NFTloanFinished(), fromBlock, 'latest'),
+    ]);
+
+    for (const log of newSales) {
+      if (!('args' in log)) continue;
+      const [buyer, tokenId, price, isDex] = log.args as unknown as [string, bigint, bigint, boolean];
+      await handleItemSold(buyer, tokenId, price, isDex);
+    }
+
+    for (const log of newAuctions) {
+      if (!('args' in log)) continue;
+      const [seller, buyer, tokenId, finalPrice] = log.args as unknown as [string, string, bigint, bigint];
+      await handleAuctionEnded(seller, buyer, tokenId, finalPrice);
+    }
+
+    for (const log of newDexLoans) {
+      if (!('args' in log)) continue;
+      const [borrower, amount] = log.args as unknown as [string, bigint];
+      await handleDexLoanFinished(borrower, amount);
+    }
+
+    for (const log of newNftLoans) {
+      if (!('args' in log)) continue;
+      const [borrower, provider, amount] = log.args as unknown as [string, string, bigint];
+      await handleNftLoanFinished(borrower, provider, amount);
+    }
+
+    if (lastPolledBlock === 0) {
+      console.log(`Caught up historical events: ${newSales.length} sales, ${newAuctions.length} auctions, ${newDexLoans.length} DEX loans, ${newNftLoans.length} NFT loans`);
+    }
+
+    lastPolledBlock = currentBlock;
+  } catch (err) {
+    console.error('Polling error:', err);
+  }
 }
 
 app.get('/api/health', (_req: Request, res: Response) => {

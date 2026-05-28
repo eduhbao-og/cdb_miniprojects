@@ -1,6 +1,6 @@
 # Makefile for project_3
 
-.PHONY: compile node deploy deploy-local frontend-install frontend-dev frontend-build backend-install backend-dev backend-build db-start db-stop db-setup db-wait dev-all
+.PHONY: compile node deploy deploy-local frontend-install frontend-dev frontend-build backend-install backend-dev backend-build db-start db-stop db-setup db-wait dev-all down
 
 compile:
 	npx hardhat compile
@@ -102,3 +102,11 @@ dev-all:
 
 	@echo "Starting backend (foreground)..."
 	@cd backend && npm run dev
+
+down:
+	@echo "Stopping all services..."
+	@pkill -f "hardhat node" >/dev/null 2>&1 || true
+	@pkill -f "vite" >/dev/null 2>&1 || true
+	@pkill -f "tsx.*server" >/dev/null 2>&1 || true
+	@$(MAKE) db-stop
+	@echo "All services stopped."

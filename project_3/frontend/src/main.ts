@@ -849,7 +849,7 @@ function renderNFTLoanRequest(loan: any, loanManager: ethers.Contract) {
       ${loan.borrower.toLowerCase() !== activeAccount!.toLowerCase() ? `
         <button class="btn fund-btn" style="padding: 6px 12px; font-size:13px;">Fund Loan</button>
       ` : `
-        <span style="font-size:11px; color:var(--text-muted);">Your Request</span>
+        <button class="btn btn-danger cancel-loan-btn" style="padding:6px 12px; font-size:13px;">Cancel Request</button>
       `}
     </div>
     <div class="status-banner" style="margin-top: 8px; grid-column:span 2;"></div>
@@ -864,7 +864,6 @@ function renderNFTLoanRequest(loan: any, loanManager: ethers.Contract) {
         fundBtn.disabled = true;
         showBanner(statusElement, "Verifying DEX token allowance...", "info");
 
-        // Verify dex token allowance first
         const dex = await getDEXContract();
         if (!dex) return;
 
@@ -886,6 +885,25 @@ function renderNFTLoanRequest(loan: any, loanManager: ethers.Contract) {
         console.error(err);
         fundBtn.disabled = false;
         showBanner(statusElement, err.message || "Funding failed", "err");
+      }
+    });
+  } else {
+    const cancelBtn = item.querySelector('.cancel-loan-btn') as HTMLButtonElement;
+    const statusElement = item.querySelector('.status-banner') as HTMLDivElement;
+
+    cancelBtn.addEventListener('click', async () => {
+      try {
+        cancelBtn.disabled = true;
+        showBanner(statusElement, "Cancelling loan request...", "info");
+        const tx = await loanManager.cancelUnfundedNFTLoan(loan.id);
+        await tx.wait();
+        showBanner(statusElement, "Loan request cancelled!", "success");
+        cancelBtn.disabled = false;
+        setTimeout(refreshData, 2000);
+      } catch (err: any) {
+        console.error(err);
+        cancelBtn.disabled = false;
+        showBanner(statusElement, err.message || "Cancellation failed", "err");
       }
     });
   }

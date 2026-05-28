@@ -93,6 +93,7 @@ export const LOAN_MANAGER_ABI = [
   "function terminateDEXLoan(uint256 loanId) external payable",
   "function checkDEXLoan(uint256 loanId) external",
   "function requestLoanNFT(uint256 loanValue, uint256 tokenId, uint256 deadline) external",
+  "function cancelUnfundedNFTLoan(uint256 tokenId) external",
   "function loanNFT(uint256 tokenId) external",
   "function makeNFTLoanPayment(uint256 tokenId) external payable",
   "function terminateNFTLoan(uint256 tokenId) external payable",
